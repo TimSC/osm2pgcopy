@@ -17,7 +17,8 @@ class CsvStore(object):
 		self.nodeFile = gzip.GzipFile("nodes.csv.gz", "wb")
 		self.wayFile = gzip.GzipFile("ways.csv.gz", "wb")
 		self.relationFile = gzip.GzipFile("relations.csv.gz", "wb")
-		
+		self.deltaEncode = False			
+
 	def __del__(self):
 		self.nodeFile.close()
 		self.wayFile.close()
@@ -34,11 +35,17 @@ class CsvStore(object):
 			username = "NULL"
 		if uid is None:
 			uid = "NULL"
+		if changeset is None:
+			changeset = "NULL"
+		if timestamp is not None:
+			timestamp = timestamp.strftime("%s")
+		else:
+			timestamp = "NULL"
 		visible = True
 		current = True
 		self.nodeFile.write(u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'.
 			format(objectId, pos[1], pos[0], changeset, username, uid, visible, 
-			timestamp.strftime("%s"), version, current, tagDump).encode("UTF-8"))
+			timestamp, version, current, tagDump).encode("UTF-8"))
 
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username = metaData
@@ -50,20 +57,29 @@ class CsvStore(object):
 			username = "NULL"
 		if uid is None:
 			uid = "NULL"
-		if len(refs) > 0:
-			deltaRefs = [refs[0]]
-			currentRef = refs[0]
-			for r in refs[1:]:
-				deltaRefs.append(r - currentRef)
-				currentRef = r
+		if changeset is None:
+			changeset = "NULL"
+		if timestamp is not None:
+			timestamp = timestamp.strftime("%s")
 		else:
-			deltaRefs = []
-		memDump= json.dumps(deltaRefs)
+			timestamp = "NULL"
+		if self.deltaEncode:
+			if len(refs) > 0:
+				deltaRefs = [refs[0]]
+				currentRef = refs[0]
+				for r in refs[1:]:
+					deltaRefs.append(r - currentRef)
+					currentRef = r
+			else:
+				deltaRefs = []
+			memDump= json.dumps(deltaRefs)
+		else:
+			memDump= json.dumps(refs)
 		visible = True
 		current = True
 		self.wayFile.write(u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'.
 			format(objectId, changeset, username, uid, visible, 
-			timestamp.strftime("%s"), version, current, tagDump, memDump).encode("UTF-8"))
+			timestamp, version, current, tagDump, memDump).encode("UTF-8"))
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username = metaData
@@ -75,25 +91,34 @@ class CsvStore(object):
 			username = u"NULL"
 		if uid is None:
 			uid = "NULL"
-		if len(refs) > 0:
-			deltaRefs = [refs[0][0][0], refs[0][1], refs[0][2]]
-			currentRef = refs[0][1]
-			for r in refs[1:]:
-				deltaRefs.append((r[0][0], r[1] - currentRef, r[2]))
-				currentRef = r[1]
+		if changeset is None:
+			changeset = "NULL"
+		if timestamp is not None:
+			timestamp = timestamp.strftime("%s")
 		else:
-			deltaRefs = []
-		memDump= json.dumps(deltaRefs)
+			timestamp = "NULL"
+		if self.deltaEncode:
+			if len(refs) > 0:
+				deltaRefs = [refs[0][0][0], refs[0][1], refs[0][2]]
+				currentRef = refs[0][1]
+				for r in refs[1:]:
+					deltaRefs.append((r[0][0], r[1] - currentRef, r[2]))
+					currentRef = r[1]
+			else:
+				deltaRefs = []
+			memDump= json.dumps(deltaRefs)
+		else:
+			memDump= json.dumps(refs)
 		memDump = memDump.replace('"', '""')
 		visible = True
 		current = True
 		self.relationFile.write(u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'.
 			format(objectId, changeset, username, uid, visible, 
-			timestamp.strftime("%s"), version, current, tagDump, memDump).encode("UTF-8"))
+			timestamp, version, current, tagDump, memDump).encode("UTF-8"))
 
 if __name__=="__main__":
 
-	fi = open("map.osm", "rt")
+	fi = gzip.open("London.osm.gz", "rt")
 	dec = osmxml.OsmXmlDecode(fi)
 	csvStore = CsvStore()
 	dec.funcStoreNode = csvStore.FuncStoreNode
