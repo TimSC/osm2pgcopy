@@ -1,5 +1,5 @@
 from pyo5m import osmxml
-import gzip, json
+import gzip, json, sys, hashlib
 
 #DROP TABLE IF EXISTS nodes;
 #DROP TABLE IF EXISTS ways;
@@ -11,18 +11,35 @@ import gzip, json
 #COPY nodes FROM '/home/postgres/copytest.csv' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 
+#db_map=# COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+#ERROR:  missing data for column "changeset"
+#CONTEXT:  COPY nodes, line 1365975728: "27549"
+#db_map=#
+
 class CsvStore(object):
 
 	def __init__(self):
 		self.nodeFile = gzip.GzipFile("nodes.csv.gz", "wb")
 		self.wayFile = gzip.GzipFile("ways.csv.gz", "wb")
 		self.relationFile = gzip.GzipFile("relations.csv.gz", "wb")
-		self.deltaEncode = False			
+		self.deltaEncode = False
+		self.nodeHash = hashlib.md5()
+		self.wayHash = hashlib.md5()
+		self.relationHash = hashlib.md5()
 
 	def __del__(self):
-		self.nodeFile.close()
-		self.wayFile.close()
-		self.relationFile.close()
+		self.Close()
+
+	def Close(self):
+		if self.nodeFile is not None:
+			self.nodeFile.close()
+		if self.wayFile is not None:
+			self.wayFile.close()
+		if self.relationFile is not None:
+			self.relationFile.close()
+		self.nodeFile = None
+		self.wayFile = None
+		self.relationFile = None
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
 		version, timestamp, changeset, uid, username = metaData
@@ -43,9 +60,11 @@ class CsvStore(object):
 			timestamp = "NULL"
 		visible = True
 		current = True
-		self.nodeFile.write(u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'.
-			format(objectId, pos[1], pos[0], changeset, username, uid, visible, 
-			timestamp, version, current, tagDump).encode("UTF-8"))
+		li = u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'. \
+			format(objectId, pos[1], pos[0], changeset, username, uid, visible, \
+			timestamp, version, current, tagDump).encode("UTF-8")
+		self.nodeHash.update(li)
+		self.nodeFile.write(li)
 
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username = metaData
@@ -77,9 +96,11 @@ class CsvStore(object):
 			memDump= json.dumps(refs)
 		visible = True
 		current = True
-		self.wayFile.write(u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'.
-			format(objectId, changeset, username, uid, visible, 
-			timestamp, version, current, tagDump, memDump).encode("UTF-8"))
+		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
+			format(objectId, changeset, username, uid, visible, \
+			timestamp, version, current, tagDump, memDump).encode("UTF-8")
+		self.wayHash.update(li)
+		self.wayFile.write(li)
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username = metaData
@@ -112,13 +133,19 @@ class CsvStore(object):
 		memDump = memDump.replace('"', '""')
 		visible = True
 		current = True
-		self.relationFile.write(u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'.
-			format(objectId, changeset, username, uid, visible, 
-			timestamp, version, current, tagDump, memDump).encode("UTF-8"))
+		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
+			format(objectId, changeset, username, uid, visible, \
+			timestamp, version, current, tagDump, memDump).encode("UTF-8")
+		self.relationHash.update(li)
+		self.relationFile.write(li)
 
 if __name__=="__main__":
 
-	fi = gzip.open("London.osm.gz", "rt")
+	inFina = "/home/tim/osm/earth201507161012.osm.gz"
+	if len(sys.argv) >= 2:
+		inFina = sys.argv[1]
+
+	fi = gzip.open(inFina, "rt")
 	dec = osmxml.OsmXmlDecode(fi)
 	csvStore = CsvStore()
 	dec.funcStoreNode = csvStore.FuncStoreNode
@@ -128,7 +155,13 @@ if __name__=="__main__":
 	done = False
 	while not done:
 		done = dec.DecodeNext()
-	
+
+	csvStore.Close()
+
+	print "nodeHash", csvStore.nodeHash.hexdigest()
+	print "wayHash", csvStore.wayHash.hexdigest()
+	print "relationHash", csvStore.relationHash.hexdigest()
+
 	del csvStore
 	del dec
 
