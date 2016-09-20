@@ -7,9 +7,9 @@ import gzip, json, sys, hashlib, os, bz2
 #DROP TABLE IF EXISTS nodes;
 #DROP TABLE IF EXISTS ways;
 #DROP TABLE IF EXISTS relations;
-#CREATE TABLE IF NOT EXISTS nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags TEXT, geom GEOMETRY(Point, 4326));
-#CREATE TABLE IF NOT EXISTS ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags TEXT, members TEXT);
-#CREATE TABLE IF NOT EXISTS relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags TEXT, members TEXT);
+#CREATE TABLE IF NOT EXISTS nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));
+#CREATE TABLE IF NOT EXISTS ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);
+#CREATE TABLE IF NOT EXISTS relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);
 
 #COPY nodes FROM '/home/postgres/copytest.csv' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
@@ -24,12 +24,21 @@ import gzip, json, sys, hashlib, os, bz2
 #CREATE INDEX relations_id ON relations (id);
 #CREATE INDEX nodes_gix ON nodes USING GIST (geom);
 
+#SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM andorra_nodes WHERE geom && ST_MakeEnvelope(1.5020099, 42.5228903, 1.540173, 42.555443, 4326);
+#GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO microcosm;
+
+#CREATE INDEX nodes_gin ON nodes USING GIN (tags);
+#SELECT * FROM nodes WHERE tags ? 'amenity' LIMIT 10;
+
+#CREATE INDEX way_members ON ways USING GIN (members);
+#SELECT members FROM ways WHERE members @> '579973777' LIMIT 10;
+
 class CsvStore(object):
 
-	def __init__(self):
-		self.nodeFile = gzip.GzipFile("nodes.csv.gz", "wb")
-		self.wayFile = gzip.GzipFile("ways.csv.gz", "wb")
-		self.relationFile = gzip.GzipFile("relations.csv.gz", "wb")
+	def __init__(self, outPrefix):
+		self.nodeFile = gzip.GzipFile(outPrefix+"nodes.csv.gz", "wb")
+		self.wayFile = gzip.GzipFile(outPrefix+"ways.csv.gz", "wb")
+		self.relationFile = gzip.GzipFile(outPrefix+"relations.csv.gz", "wb")
 		self.deltaEncode = False
 		self.nodeHash = hashlib.md5()
 		self.wayHash = hashlib.md5()
@@ -150,8 +159,11 @@ class CsvStore(object):
 if __name__=="__main__":
 
 	inFina = "/home/tim/osm/earth201507161012.osm.gz"
+	outPrefix = ""
 	if len(sys.argv) >= 2:
 		inFina = sys.argv[1]
+	if len(sys.argv) >= 3:
+		outPrefix = sys.argv[2]
 
 	splitFina = os.path.splitext(inFina)
 	if splitFina[1] == ".gz":
@@ -161,7 +173,7 @@ if __name__=="__main__":
 	else:
 		fi = open(inFina, "rt")
 	dec = osmxml.OsmXmlDecode(fi)
-	csvStore = CsvStore()
+	csvStore = CsvStore(outPrefix)
 	dec.funcStoreNode = csvStore.FuncStoreNode
 	dec.funcStoreWay = csvStore.FuncStoreWay
 	dec.funcStoreRelation = csvStore.FuncStoreRelation
