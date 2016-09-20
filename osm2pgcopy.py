@@ -32,6 +32,7 @@ import gzip, json, sys, hashlib, os, bz2
 
 #CREATE INDEX way_members ON ways USING GIN (members);
 #SELECT members FROM ways WHERE members @> '579973777' LIMIT 10;
+#SELECT members FROM andorra_ways WHERE members @> ANY(ARRAY['579973777','51116315']::jsonb[]);
 
 class CsvStore(object):
 
