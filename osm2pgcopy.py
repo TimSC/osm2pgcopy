@@ -1,5 +1,5 @@
 from pyo5m import osmxml
-import gzip, json, sys, hashlib
+import gzip, json, sys, hashlib, os, bz2
 
 #DROP TABLE IF EXISTS nodes;
 #DROP TABLE IF EXISTS ways;
@@ -145,7 +145,13 @@ if __name__=="__main__":
 	if len(sys.argv) >= 2:
 		inFina = sys.argv[1]
 
-	fi = gzip.open(inFina, "rt")
+	splitFina = os.path.splitext(inFina)
+	if splitFina[1] == ".gz":
+		fi = gzip.open(inFina, "rt")
+	elif splitFina[1] == ".bz2":
+		fi = bz2.BZ2File(inFina, "r")
+	else:
+		fi = open(inFina, "rt")
 	dec = osmxml.OsmXmlDecode(fi)
 	csvStore = CsvStore()
 	dec.funcStoreNode = csvStore.FuncStoreNode
