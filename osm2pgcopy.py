@@ -1,6 +1,9 @@
 from pyo5m import osmxml
 import gzip, json, sys, hashlib, os, bz2
 
+#sudo su postgres
+#psql --dbname=db_map
+#
 #DROP TABLE IF EXISTS nodes;
 #DROP TABLE IF EXISTS ways;
 #DROP TABLE IF EXISTS relations;
@@ -15,6 +18,11 @@ import gzip, json, sys, hashlib, os, bz2
 #ERROR:  missing data for column "changeset"
 #CONTEXT:  COPY nodes, line 1365975728: "27549"
 #db_map=#
+
+#CREATE INDEX nodes_id ON nodes (id);
+#CREATE INDEX ways_id ON ways (id);
+#CREATE INDEX relations_id ON relations (id);
+#CREATE INDEX nodes_gix ON nodes USING GIST (geom);
 
 class CsvStore(object):
 
