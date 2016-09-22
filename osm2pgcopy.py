@@ -9,7 +9,7 @@ import gzip, json, sys, hashlib, os, bz2
 #DROP TABLE IF EXISTS relations;
 #CREATE TABLE IF NOT EXISTS nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));
 #CREATE TABLE IF NOT EXISTS ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);
-#CREATE TABLE IF NOT EXISTS relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);
+#CREATE TABLE IF NOT EXISTS relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);
 
 #COPY nodes FROM '/home/postgres/copytest.csv' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
@@ -35,7 +35,7 @@ import gzip, json, sys, hashlib, os, bz2
 #SELECT members FROM andorra_ways WHERE members @> ANY(ARRAY['579973777','51116315']::jsonb[]);
 
 #CREATE INDEX relation_members ON relations USING GIN (members);
-#SELECT id FROM greece_relations WHERE members @> '[["way", 10741857, "outer"]]' LIMIT 1;
+#SELECT id FROM greece_relations WHERE members @> '[["way", 10741857]]';
 #SELECT id, arr FROM greece_relations r, jsonb_array_elements(r.members) AS arr WHERE arr->0 ? 'way' AND arr->1 = '24030116'; #Slow!
 
 class CsvStore(object):
@@ -44,7 +44,6 @@ class CsvStore(object):
 		self.nodeFile = gzip.GzipFile(outPrefix+"nodes.csv.gz", "wb")
 		self.wayFile = gzip.GzipFile(outPrefix+"ways.csv.gz", "wb")
 		self.relationFile = gzip.GzipFile(outPrefix+"relations.csv.gz", "wb")
-		self.deltaEncode = False
 		self.nodeHash = hashlib.md5()
 		self.wayHash = hashlib.md5()
 		self.relationHash = hashlib.md5()
@@ -104,18 +103,8 @@ class CsvStore(object):
 			timestamp = timestamp.strftime("%s")
 		else:
 			timestamp = "NULL"
-		if self.deltaEncode:
-			if len(refs) > 0:
-				deltaRefs = [refs[0]]
-				currentRef = refs[0]
-				for r in refs[1:]:
-					deltaRefs.append(r - currentRef)
-					currentRef = r
-			else:
-				deltaRefs = []
-			memDump= json.dumps(deltaRefs)
-		else:
-			memDump= json.dumps(refs)
+
+		memDump= json.dumps(refs)
 		visible = True
 		current = True
 		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
@@ -140,24 +129,16 @@ class CsvStore(object):
 			timestamp = timestamp.strftime("%s")
 		else:
 			timestamp = "NULL"
-		if self.deltaEncode:
-			if len(refs) > 0:
-				deltaRefs = [refs[0][0][0], refs[0][1], refs[0][2]]
-				currentRef = refs[0][1]
-				for r in refs[1:]:
-					deltaRefs.append((r[0][0], r[1] - currentRef, r[2]))
-					currentRef = r[1]
-			else:
-				deltaRefs = []
-			memDump= json.dumps(deltaRefs)
-		else:
-			memDump= json.dumps(refs)
+
+		memDump= json.dumps([mem[:2] for mem in refs])
 		memDump = memDump.replace('"', '""')
+		rolesDump= json.dumps([mem[2] for mem in refs])
+		rolesDump = rolesDump.replace('"', '""')
 		visible = True
 		current = True
-		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
+		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\",\"{10}\"\n'. \
 			format(objectId, changeset, username, uid, visible, \
-			timestamp, version, current, tagDump, memDump).encode("UTF-8")
+			timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
 		self.relationHash.update(li)
 		self.relationFile.write(li)
 
