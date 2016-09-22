@@ -34,6 +34,10 @@ import gzip, json, sys, hashlib, os, bz2
 #SELECT members FROM ways WHERE members @> '579973777' LIMIT 10;
 #SELECT members FROM andorra_ways WHERE members @> ANY(ARRAY['579973777','51116315']::jsonb[]);
 
+#CREATE INDEX relation_members ON relations USING GIN (members);
+#SELECT id FROM greece_relations WHERE members @> '[["way", 10741857, "outer"]]' LIMIT 1;
+#SELECT id, arr FROM greece_relations r, jsonb_array_elements(r.members) AS arr WHERE arr->0 ? 'way' AND arr->1 = '24030116'; #Slow!
+
 class CsvStore(object):
 
 	def __init__(self, outPrefix):
