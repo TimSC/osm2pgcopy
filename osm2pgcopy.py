@@ -164,6 +164,8 @@ if __name__=="__main__":
 	dec.funcStoreWay = csvStore.FuncStoreWay
 	dec.funcStoreRelation = csvStore.FuncStoreRelation
 
+	print "Note: Output files not flushed, valid or complete until this program has finished!"
+
 	done = False
 	while not done:
 		done = dec.DecodeNext()
