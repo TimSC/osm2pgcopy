@@ -13,6 +13,7 @@ import gzip, json, sys, hashlib, os, bz2
 
 #COPY nodes FROM '/home/postgres/copytest.csv' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+#select * from pg_stat_activity;
 
 #db_map=# COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #ERROR:  missing data for column "changeset"
