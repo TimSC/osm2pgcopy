@@ -3,11 +3,10 @@ from pyo5m import OsmData
 import psycopg2 #apt install python-psycopg2
 import config
 	
-
-def available_versions(conn, objType, objId):
+def available_versions(conn, tablePrefix, objType, objId):
 	cur = conn.cursor()
-	cur.execute("""SELECT version FROM planet_nodes WHERE id = %s;""", (objId,))
-	print list(cur.fetchall())
+	cur.execute("""SELECT version FROM {0}{1}s WHERE id = %s;""".format(tablePrefix, objType), (objId,))
+	return [tmp[0] for tmp in cur.fetchall()]
 
 if __name__ == "__main__":
 
@@ -17,7 +16,7 @@ if __name__ == "__main__":
 	#102/556 : All new data
 
 	for i in range(0, 1000):
-		fina = "102/552/{0:03d}.osc.gz".format(i)
+		fina = "102/556/{0:03d}.osc.gz".format(i)
 		fi = gzip.open(fina) 
 		oscData = OsmData.OsmChange()
 		oscData.LoadFromOscXml(fi)
@@ -40,13 +39,14 @@ if __name__ == "__main__":
 				version, timestamp, changeset, uid, username = metaData
 
 				cur = conn.cursor()
-				cur.execute("""SELECT COUNT(*) FROM planet_nodes WHERE id = %s AND version >= %s;""", (objectId, version))
+				cur.execute("""SELECT COUNT(*) FROM {0}nodes WHERE id = %s AND version >= %s;""".format(config.dbtableprefix), (objectId, version))
 				count = cur.fetchall()[0][0]
 				if count > 0:
 					nodeHits += 1
-				#else:
-					#print "node missing", objectId, version
-					#available_versions(conn, "node", objectId)
+				else:
+					print "node missing", objectId, version
+					aver = available_versions(conn, config.dbtableprefix, "node", objectId)
+					print aver
 				#print objectId, version, count
 
 			print "nodes", nodeHits, len(osmData.nodes)
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 				version, timestamp, changeset, uid, username = metaData
 
 				cur = conn.cursor()
-				cur.execute("""SELECT COUNT(*) FROM planet_ways WHERE id = %s AND version >= %s;""", (objectId, version))
+				cur.execute("""SELECT COUNT(*) FROM {0}ways WHERE id = %s AND version >= %s;""".format(config.dbtableprefix), (objectId, version))
 				count = cur.fetchall()[0][0]
 				if count > 0:
 					wayHits += 1
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 				version, timestamp, changeset, uid, username = metaData
 
 				cur = conn.cursor()
-				cur.execute("""SELECT COUNT(*) FROM planet_relations WHERE id = %s AND version >= %s;""", (objectId, version))
+				cur.execute("""SELECT COUNT(*) FROM {0}relations WHERE id = %s AND version >= %s;""".format(config.dbtableprefix), (objectId, version))
 				count = cur.fetchall()[0][0]
 				if count > 0:
 					relationHits += 1

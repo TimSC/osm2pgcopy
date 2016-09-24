@@ -9,7 +9,7 @@ if __name__=="__main__":
 	while not done:
 		try:
 
-			for i in range(102,103):
+			for i in range(103,104):
 				url1 = "{0}{1:03d}/".format(url,i)
 				localpath = "{0}/".format(i)
 
@@ -18,7 +18,7 @@ if __name__=="__main__":
 					if resp.status_code != 200:
 						break
 
-				for j in range(552,1000):
+				for j in range(0,1000):
 					url2 = "{0}{1:03d}/".format(url1,j)
 					localpath2 = "{0}{1:03d}/".format(localpath, j)
 
