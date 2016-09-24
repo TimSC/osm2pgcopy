@@ -45,8 +45,8 @@ def ProcessFile(fina, conn):
 				insertSql = "INSERT INTO {0}nodes ".format(config.dbtableprefix)+\
 					"(id, changeset, username, uid, visible, timestamp, version, current, tags, geom) "+\
 					"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,ST_GeomFromText(%s, 4326));"
-				cur.execute(insertSql, (objectId, changeset, username.encode("UTF-8"), 
-					uid, visible, unixTime, version, foundNewest, json.dumps(tags).encode("UTF-8"), geom))
+				cur.execute(insertSql, (objectId, changeset, username, 
+					uid, visible, unixTime, version, foundNewest, json.dumps(tags), geom))
 				#print cur.rowcount
 
 		conn.commit()
@@ -75,9 +75,9 @@ def ProcessFile(fina, conn):
 				insertSql = "INSERT INTO {0}ways ".format(config.dbtableprefix)+\
 					"(id, changeset, username, uid, visible, timestamp, version, current, tags, members) "+\
 					"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-				cur.execute(insertSql, (objectId, changeset, username.encode("UTF-8"), uid, visible, unixTime, version, foundNewest, 
-					json.dumps(tags).encode("UTF-8"), 
-					json.dumps(refs).encode("UTF-8")))
+				cur.execute(insertSql, (objectId, changeset, username, uid, visible, unixTime, version, foundNewest, 
+					json.dumps(tags), 
+					json.dumps(refs)))
 
 		conn.commit()
 		print "ways", wayHits, len(osmData.ways)
@@ -109,11 +109,11 @@ def ProcessFile(fina, conn):
 				insertSql = "INSERT INTO {0}relations ".format(config.dbtableprefix)+\
 					"(id, changeset, username, uid, visible, timestamp, version, current, tags, members, memberroles) "+\
 					"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-				cur.execute(insertSql, (objectId, changeset, username.encode("UTF-8"), uid, 
+				cur.execute(insertSql, (objectId, changeset, username, uid, 
 					visible, unixTime, version, foundNewest, 
-					json.dumps(tags).encode("UTF-8"), 
-					json.dumps(mems).encode("UTF-8"), 
-					json.dumps(memroles).encode("UTF-8")))
+					json.dumps(tags), 
+					json.dumps(mems), 
+					json.dumps(memroles)))
 
 		conn.commit()
 		print "relations", relationHits, len(osmData.relations)
