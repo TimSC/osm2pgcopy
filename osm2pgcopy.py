@@ -64,7 +64,7 @@ class CsvStore(object):
 		self.relationFile = None
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
-		version, timestamp, changeset, uid, username = metaData
+		version, timestamp, changeset, uid, username, visible = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		tagDump = tagDump.replace('\u00b0', '')
@@ -80,7 +80,7 @@ class CsvStore(object):
 			timestamp = timestamp.strftime("%s")
 		else:
 			timestamp = "NULL"
-		visible = True
+		if visible is None: visible = True
 		current = True
 		li = u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'. \
 			format(objectId, pos[1], pos[0], changeset, username, uid, visible, \
@@ -89,7 +89,7 @@ class CsvStore(object):
 		self.nodeFile.write(li)
 
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
-		version, timestamp, changeset, uid, username = metaData
+		version, timestamp, changeset, uid, username, visible = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		if username is not None:
@@ -106,7 +106,7 @@ class CsvStore(object):
 			timestamp = "NULL"
 
 		memDump= json.dumps(refs)
-		visible = True
+		if visible is None: visible = True
 		current = True
 		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
 			format(objectId, changeset, username, uid, visible, \
@@ -115,7 +115,7 @@ class CsvStore(object):
 		self.wayFile.write(li)
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
-		version, timestamp, changeset, uid, username = metaData
+		version, timestamp, changeset, uid, username, visible = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		if username is not None:
@@ -135,7 +135,7 @@ class CsvStore(object):
 		memDump = memDump.replace('"', '""')
 		rolesDump= json.dumps([mem[2] for mem in refs])
 		rolesDump = rolesDump.replace('"', '""')
-		visible = True
+		if visible is None: visible = True
 		current = True
 		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\",\"{10}\"\n'. \
 			format(objectId, changeset, username, uid, visible, \
