@@ -15,11 +15,6 @@ import gzip, json, sys, hashlib, os, bz2
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #select * from pg_stat_activity;
 
-#db_map=# COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-#ERROR:  missing data for column "changeset"
-#CONTEXT:  COPY nodes, line 1365975728: "27549"
-#db_map=#
-
 #CREATE INDEX nodes_id ON nodes (id);
 #CREATE INDEX ways_id ON ways (id);
 #CREATE INDEX relations_id ON relations (id);
@@ -31,11 +26,12 @@ import gzip, json, sys, hashlib, os, bz2
 #CREATE INDEX nodes_gin ON nodes USING GIN (tags);
 #SELECT * FROM nodes WHERE tags ? 'amenity' LIMIT 10;
 
-#CREATE INDEX way_members ON ways USING GIN (members);
+#SET maintenance_work_mem TO '32 MB';
+#CREATE INDEX way_members ON ways USING GIN (members jsonb_path_ops);
 #SELECT members FROM ways WHERE members @> '579973777' LIMIT 10;
 #SELECT members FROM andorra_ways WHERE members @> ANY(ARRAY['579973777','51116315']::jsonb[]);
 
-#CREATE INDEX relation_members ON relations USING GIN (members);
+#CREATE INDEX relation_members ON relations USING GIN (members jsonb_path_ops);
 #SELECT id FROM greece_relations WHERE members @> '[["way", 10741857]]';
 #SELECT id, arr FROM greece_relations r, jsonb_array_elements(r.members) AS arr WHERE arr->0 ? 'way' AND arr->1 = '24030116'; #Slow!
 
@@ -44,24 +40,24 @@ class CsvStore(object):
 	def __init__(self, outPrefix):
 		self.nodeFile = gzip.GzipFile(outPrefix+"nodes.csv.gz", "wb")
 		self.wayFile = gzip.GzipFile(outPrefix+"ways.csv.gz", "wb")
+		self.wayMembersFile = gzip.GzipFile(outPrefix+"waymems.csv.gz", "wb")
 		self.relationFile = gzip.GzipFile(outPrefix+"relations.csv.gz", "wb")
+		self.relationMemNodesFile = gzip.GzipFile(outPrefix+"relationmems-n.csv.gz", "wb")
+		self.relationMemWaysFile = gzip.GzipFile(outPrefix+"relationmems-w.csv.gz", "wb")
+		self.relationMemRelsFile = gzip.GzipFile(outPrefix+"relationmems-r.csv.gz", "wb")
+
 		self.nodeHash = hashlib.md5()
 		self.wayHash = hashlib.md5()
 		self.relationHash = hashlib.md5()
 
-	def __del__(self):
-		self.Close()
-
 	def Close(self):
-		if self.nodeFile is not None:
-			self.nodeFile.close()
-		if self.wayFile is not None:
-			self.wayFile.close()
-		if self.relationFile is not None:
-			self.relationFile.close()
-		self.nodeFile = None
-		self.wayFile = None
-		self.relationFile = None
+		self.nodeFile.close()
+		self.wayFile.close()
+		self.wayMembersFile.close()
+		self.relationFile.close()
+		self.relationMemNodesFile.close()
+		self.relationMemWaysFile.close()
+		self.relationMemRelsFile.close()
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
 		version, timestamp, changeset, uid, username, visible = metaData
@@ -114,6 +110,9 @@ class CsvStore(object):
 		self.wayHash.update(li)
 		self.wayFile.write(li)
 
+		for mem in refs:
+			self.wayMembersFile.write("{0},{1},{2}\n".format(objectId, version, mem))
+
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible = metaData
 		tagDump = json.dumps(tags)
@@ -142,6 +141,14 @@ class CsvStore(object):
 			timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
 		self.relationHash.update(li)
 		self.relationFile.write(li)
+
+		for memTy, memId, memRole in refs:
+			if memTy == "node":
+				self.relationMemNodesFile.write("{0},{1},{2}\n".format(objectId, version, memId))
+			elif memTy == "way":
+				self.relationMemWaysFile.write("{0},{1},{2}\n".format(objectId, version, memId))
+			elif memTy == "relation":
+				self.relationMemRelsFile.write("{0},{1},{2}\n".format(objectId, version, memId))
 
 if __name__=="__main__":
 
