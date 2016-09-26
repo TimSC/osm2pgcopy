@@ -1,5 +1,5 @@
-from pyo5m import osmxml
-import gzip, json, config, array
+from pyo5m import o5m
+import gzip, json, config, datetime
 import psycopg2, psycopg2.extras #apt install python-psycopg2
 
 def GetWaysForNodes(conn, qids, nodeIds, extraNodeIds, knownWayIds):
@@ -26,7 +26,7 @@ def GetWaysForNodes(conn, qids, nodeIds, extraNodeIds, knownWayIds):
 	
 	return wcount
 	
-def GetNodesById(conn, qids):
+def GetNodesById(conn, qids, outEnc):
 	sqlFrags = []
 	for qid in qids:
 		sqlFrags.append("id = %s")
@@ -38,8 +38,29 @@ def GetNodesById(conn, qids):
 
 	for row in cur:
 		count += 1
+		nid = row["id"]
+		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
+			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
+		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
 
-def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut):
+def GetWaysById(conn, qids, outEnc):
+	sqlFrags = []
+	for qid in qids:
+		sqlFrags.append("id = %s")
+	query = ("SELECT * FROM {0}ways".format(config.dbtableprefix) +
+		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	cur.execute(query, qids)
+	count = 0
+
+	for row in cur:
+		count += 1
+		wid = row["id"]
+		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
+			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
+		enc.StoreWay(wid, metaData, row["tags"], row["members"])
+
+def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, encOut):
 	#print qids
 	sqlFrags = []
 	relTable = "{0}relations".format(config.dbtableprefix)
@@ -56,10 +77,21 @@ def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut):
 		rid = row["id"]
 		if rid not in knownRelationIds:
 			relationIdsOut.add(rid)
+			mems = []
+			for (memTy, memId), memRole in zip(row["members"], row["memberroles"]):
+				mems.append((memTy, memId, memRole))
+			metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
+				row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
+			enc.StoreRelation(rid, metaData, row["tags"], mems)
 
 if __name__=="__main__":
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
 	bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
+
+	fi = gzip.open("out.o5m.gz", "wb")
+	enc = o5m.O5mEncode(fi)
+	enc.StoreIsDiff(False)
+	enc.StoreBounds(bbox)
 
 	#Get nodes within bbox
 	knownNodeIds = set()
@@ -70,11 +102,14 @@ if __name__=="__main__":
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	cur.execute(query, bbox)
 	for row in cur:
-		knownNodeIds.add(row["id"])
-		#TODO write to output
+		nid = row["id"]
+		knownNodeIds.add(nid)
+		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
+			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
+		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
 
 	print "num nodes", len(knownNodeIds)
-	
+
 	#Get ways for these nodes
 	cursor = 0
 	step = 100
@@ -98,15 +133,29 @@ if __name__=="__main__":
 	for qid in extraNodeIds:
 		qids.append(qid)
 		if len(qids) >= step:
-			GetNodesById(conn, qids)
+			GetNodesById(conn, qids, enc)
 			qids = []
 	if len(qids) > 0:
-		GetNodesById(conn, qids)
+		GetNodesById(conn, qids, enc)
 
 	knownNodeIds.update(extraNodeIds)
 	del extraNodeIds
-
+	enc.Reset()
 	print "nodes to complete ways done"
+
+	#Send ways to output encoder
+	print "encoding ways"
+	cursor = 0
+	for qid in knownWayIds:
+		qids.append(qid)
+		if len(qids) >= step:
+			GetWaysById(conn, qids, enc)
+			qids = []
+	if len(qids) > 0:
+		GetWaysById(conn, qids, enc)
+
+	enc.Reset()
+	print "ways encoded"
 
 	#Get relations for these objects
 	cursor = 0
@@ -114,10 +163,10 @@ if __name__=="__main__":
 	for qid in knownNodeIds:
 		qids.append(qid)
 		if len(qids) >= step:
-			GetRelationsForObjects(conn, "n", qids, knownRelationIds, knownRelationIds)
+			GetRelationsForObjects(conn, "n", qids, knownRelationIds, knownRelationIds, enc)
 			qids = []
 	if len(qids) > 0:
-		GetRelationsForObjects(conn, "n", qids, knownRelationIds, knownRelationIds)
+		GetRelationsForObjects(conn, "n", qids, knownRelationIds, knownRelationIds, enc)
 	print "num relations from nodes", len(knownRelationIds)
 	
 	cursor = 0
@@ -125,14 +174,14 @@ if __name__=="__main__":
 	for qid in knownWayIds:
 		qids.append(qid)
 		if len(qids) >= step:
-			GetRelationsForObjects(conn, "w", qids, knownRelationIds, relationsFromWays)
+			GetRelationsForObjects(conn, "w", qids, knownRelationIds, relationsFromWays, enc)
 			qids = []
 	if len(qids) > 0:
-		GetRelationsForObjects(conn, "w", qids, knownRelationIds, relationsFromWays)
+		GetRelationsForObjects(conn, "w", qids, knownRelationIds, relationsFromWays, enc)
 	print "num relations from ways", len(relationsFromWays)
 	knownRelationIds.update(relationsFromWays)
 
-	#Collect relations of relations
+	#Get relations of relations
 	seekingRelIds = knownRelationIds
 	for i in range(10):
 		cursor = 0
@@ -140,10 +189,10 @@ if __name__=="__main__":
 		for qid in seekingRelIds:
 			qids.append(qid)
 			if len(qids) >= step:
-				GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds)
+				GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds, enc)
 				qids = []
 		if len(qids) > 0:
-			GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds)
+			GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds, enc)
 		print "extraRelationIds", len(extraRelationIds)
 		
 		knownRelationIds.update(extraRelationIds)
@@ -151,6 +200,8 @@ if __name__=="__main__":
 			break
 		seekingRelIds = extraRelationIds
 
+	enc.Finish()
+	fi.close()
 	print "All done"
 
 
