@@ -118,7 +118,6 @@ def ProcessFile(fina, conn):
 		conn.commit()
 		print "relations", relationHits, len(osmData.relations)
 
-
 if __name__ == "__main__":
 
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
@@ -126,13 +125,13 @@ if __name__ == "__main__":
 	#102/552 : Day before planet dump
 	#102/556 : All new data
 
-	#for i in range(552, 1000):
-	#	for j in range(0, 1000):
-	#		fina = "102/{0:03d}/{1:03d}.osc.gz".format(i, j)
-	#		ProcessFile(fina, conn)
-
-	for i in range(0, 184):
+	for i in range(552, 1000):
 		for j in range(0, 1000):
-			fina = "103/{0:03d}/{1:03d}.osc.gz".format(i, j)
+			fina = "102/{0:03d}/{1:03d}.osc.gz".format(i, j)
 			ProcessFile(fina, conn)
+
+	#for i in range(0, 184):
+	#	for j in range(0, 1000):
+	#		fina = "103/{0:03d}/{1:03d}.osc.gz".format(i, j)
+	#		ProcessFile(fina, conn)
 

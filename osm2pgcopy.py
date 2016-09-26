@@ -15,9 +15,9 @@ import gzip, json, sys, hashlib, os, bz2
 #COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #select * from pg_stat_activity;
 
-#CREATE INDEX nodes_id ON nodes (id);
-#CREATE INDEX ways_id ON ways (id);
-#CREATE INDEX relations_id ON relations (id);
+#CREATE INDEX nodes_id ON nodes (id, version);
+#CREATE INDEX ways_id ON ways (id, version);
+#CREATE INDEX relations_id ON relations (id, version);
 #CREATE INDEX nodes_gix ON nodes USING GIST (geom);
 
 #SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM andorra_nodes WHERE geom && ST_MakeEnvelope(1.5020099, 42.5228903, 1.540173, 42.555443, 4326);
@@ -26,14 +26,20 @@ import gzip, json, sys, hashlib, os, bz2
 #CREATE INDEX nodes_gin ON nodes USING GIN (tags);
 #SELECT * FROM nodes WHERE tags ? 'amenity' LIMIT 10;
 
-#SET maintenance_work_mem TO '32 MB';
-#CREATE INDEX way_members ON ways USING GIN (members jsonb_path_ops);
-#SELECT members FROM ways WHERE members @> '579973777' LIMIT 10;
-#SELECT members FROM andorra_ways WHERE members @> ANY(ARRAY['579973777','51116315']::jsonb[]);
+#CREATE TABLE IF NOT EXISTS planet_way_mems (id BIGINT, version INTEGER, member BIGINT);
+#CREATE TABLE IF NOT EXISTS greece_relation_mems_n (id BIGINT, version INTEGER, member BIGINT);
+#CREATE TABLE IF NOT EXISTS greece_relation_mems_w (id BIGINT, version INTEGER, member BIGINT);
+#CREATE TABLE IF NOT EXISTS greece_relation_mems_r (id BIGINT, version INTEGER, member BIGINT);
 
-#CREATE INDEX relation_members ON relations USING GIN (members jsonb_path_ops);
-#SELECT id FROM greece_relations WHERE members @> '[["way", 10741857]]';
-#SELECT id, arr FROM greece_relations r, jsonb_array_elements(r.members) AS arr WHERE arr->0 ? 'way' AND arr->1 = '24030116'; #Slow!
+#COPY greece_way_mems FROM PROGRAM 'zcat /home/postgres/greece-waymems.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+#COPY greece_relation_mems_n FROM PROGRAM 'zcat /home/postgres/greece-relationmems-n.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+#COPY greece_relation_mems_w FROM PROGRAM 'zcat /home/postgres/greece-relationmems-w.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+#COPY greece_relation_mems_r FROM PROGRAM 'zcat /home/postgres/greece-relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+
+#CREATE INDEX greece_way_mems_mids ON greece_way_mems (member);
+#CREATE INDEX greece_relation_mems_n_mids ON greece_relation_mems_n (member);
+#CREATE INDEX greece_relation_mems_w_mids ON greece_relation_mems_w (member);
+#CREATE INDEX greece_relation_mems_r_mids ON greece_relation_mems_r (member);
 
 class CsvStore(object):
 
