@@ -41,6 +41,17 @@ import gzip, json, sys, hashlib, os, bz2
 #CREATE INDEX greece_relation_mems_w_mids ON greece_relation_mems_w (member);
 #CREATE INDEX greece_relation_mems_r_mids ON greece_relation_mems_r (member);
 
+#Import from fosm.org 2015 dump
+#       table_name        | row_estimate | toast_bytes | table_bytes  |   total    |   index    |   toast    |   table    
+#-------------------------+--------------+-------------+--------------+------------+------------+------------+------------
+# planet_nodes            |  1.36598e+09 |      131072 | 166346784768 | 252 GB     | 98 GB      | 128 kB     | 155 GB
+# planet_ways             |  1.23554e+08 |   548945920 |  48414597120 | 48 GB      | 2647 MB    | 524 MB     | 45 GB
+# planet_relations        |  1.39281e+06 |    14221312 |    653623296 | 1082 MB    | 445 MB     | 14 MB      | 623 MB
+# planet_way_mems         |   1.6108e+09 |             |  84069392384 | 112 GB     | 34 GB      |            | 78 GB
+# planet_relation_mems_w  |   1.2219e+07 |             |    637747200 | 870 MB     | 262 MB     |            | 608 MB
+# planet_relation_mems_r  |       112434 |             |      5898240 | 8256 kB    | 2496 kB    |            | 5760 kB
+# planet_relation_mems_n  |  1.78653e+06 |             |     93265920 | 127 MB     | 38 MB      |            | 89 MB
+
 class CsvStore(object):
 
 	def __init__(self, outPrefix):

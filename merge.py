@@ -48,7 +48,7 @@ def ProcessFile(fina, conn):
 				cur.execute(insertSql, (objectId, changeset, username, 
 					uid, visible, unixTime, version, foundNewest, json.dumps(tags), geom))
 				#print cur.rowcount
-
+				
 		conn.commit()
 		print "nodes", nodeHits, len(osmData.nodes)
 
@@ -78,6 +78,12 @@ def ProcessFile(fina, conn):
 				cur.execute(insertSql, (objectId, changeset, username, uid, visible, unixTime, version, foundNewest, 
 					json.dumps(tags), 
 					json.dumps(refs)))
+
+				for mem in refs:
+					insertSql = "INSERT INTO {0}way_mems ".format(config.dbtableprefix)+\
+						"(id, version, member) "+\
+						"VALUES (%s,%s,%s);"
+					cur.execute(insertSql, (objectId, version, mem))
 
 		conn.commit()
 		print "ways", wayHits, len(osmData.ways)
@@ -114,6 +120,23 @@ def ProcessFile(fina, conn):
 					json.dumps(tags), 
 					json.dumps(mems), 
 					json.dumps(memroles)))
+
+				for memTy, memId, memRole in refs:
+					if memTy == "node":
+						insertSql = "INSERT INTO {0}relation_mems_n ".format(config.dbtableprefix)+\
+							"(id, version, member) "+\
+							"VALUES (%s,%s,%s);"
+						cur.execute(insertSql, (objectId, version, memId))
+					if memTy == "way":
+						insertSql = "INSERT INTO {0}relation_mems_w ".format(config.dbtableprefix)+\
+							"(id, version, member) "+\
+							"VALUES (%s,%s,%s);"
+						cur.execute(insertSql, (objectId, version, memId))
+					if memTy == "relation":
+						insertSql = "INSERT INTO {0}relation_mems_r ".format(config.dbtableprefix)+\
+							"(id, version, member) "+\
+							"VALUES (%s,%s,%s);"
+						cur.execute(insertSql, (objectId, version, memId))
 
 		conn.commit()
 		print "relations", relationHits, len(osmData.relations)
