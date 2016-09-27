@@ -1,7 +1,7 @@
 import gzip, json, datetime
 from pyo5m import OsmData
 import psycopg2 #apt install python-psycopg2
-import config
+import config, os
 
 def ProcessFile(fina, conn):
 
@@ -151,10 +151,12 @@ if __name__ == "__main__":
 	for i in range(552, 1000):
 		for j in range(0, 1000):
 			fina = "102/{0:03d}/{1:03d}.osc.gz".format(i, j)
-			ProcessFile(fina, conn)
+			if os.path.exists(fina):
+				ProcessFile(fina, conn)
 
-	#for i in range(0, 184):
+	#for i in range(0, 185):
 	#	for j in range(0, 1000):
 	#		fina = "103/{0:03d}/{1:03d}.osc.gz".format(i, j)
-	#		ProcessFile(fina, conn)
+	#		if os.path.exists(fina):
+	#			ProcessFile(fina, conn)
 

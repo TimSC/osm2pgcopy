@@ -86,7 +86,9 @@ def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, 
 
 if __name__=="__main__":
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
+	#left,bottom,right,top
 	bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
+	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
 
 	fi = gzip.open("out.o5m.gz", "wb")
 	enc = o5m.O5mEncode(fi)
