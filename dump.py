@@ -12,7 +12,7 @@ if __name__=="__main__":
 	enc.StoreIsDiff(False)
 	enc.StoreBounds(bbox)
 
-	#Get nodes within bbox
+	#Get nodes
 	count = 0
 	query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
 		" WHERE visible=true and current=true;")
@@ -21,7 +21,7 @@ if __name__=="__main__":
 	for row in cur:
 		count+= 1
 		if count % 1000000 == 0:
-			print count
+			print count, "nodes"
 		nid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
@@ -30,6 +30,7 @@ if __name__=="__main__":
 	print "num nodes", count
 	enc.Reset()
 
+	#Get ways
 	query = ("SELECT * FROM {0}ways".format(config.dbtableprefix) +
 		" WHERE visible=true and current=true;")
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -39,16 +40,17 @@ if __name__=="__main__":
 	for row in cur:
 		count += 1
 		if count % 1000000 == 0:
-			print count
+			print count, "ways"
 		wid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
+
 		enc.StoreWay(wid, metaData, row["tags"], row["members"])
-		count+= 1
 
 	print "num ways", count
 	enc.Reset()
 
+	#Get relations
 	query = ("SELECT * FROM {0}relations".format(config.dbtableprefix) +
 		" WHERE visible=true and current=true;")
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -58,7 +60,7 @@ if __name__=="__main__":
 	for row in cur:
 		count += 1
 		if count % 1000000 == 0:
-			print count
+			print count, "relations"
 		wid = row["id"]
 		mems = []
 		for (memTy, memId), memRole in zip(row["members"], row["memberroles"]):
@@ -67,7 +69,6 @@ if __name__=="__main__":
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"].decode("UTF-8"), row["visible"])
 		enc.StoreWay(wid, metaData, row["tags"], mems)
-		count+= 1
 
 	print "num relatons", count
 
