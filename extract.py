@@ -95,26 +95,52 @@ def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, 
 
 	cur.close()
 
+def ShpFileToLineString(fina):
+	ptStrs = []
+	for pt in open(fina, "rt").readlines():
+		try:
+			latlon = map(float, pt.strip().split(" "))
+		except:
+			continue #Invalid line
+		ptStrs.append("{0} {1}".format(latlon[1], latlon[0]))
+	ptStrs.append(ptStrs[0]) #Close loop
+	shpStr = "POLYGON(({0}))".format(",".join(ptStrs))
+	return shpStr
+
 if __name__=="__main__":
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
 	#left,bottom,right,top
-	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
-	bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
+	bbox = None
+	bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
+	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
+	
+	shpStr = None
+	#shpStr = ShpFileToLineString("shapes/hayling.shp")
+	#shpStr = ShpFileToLineString("shapes/ontario.shp")
 
 	fi = gzip.open("extract.o5m.gz", "wb")
 	enc = o5m.O5mEncode(fi)
 	enc.StoreIsDiff(False)
-	enc.StoreBounds(bbox)
+	if bbox is not None:
+		enc.StoreBounds(bbox)
 
 	#Get nodes within bbox
 	knownNodeIds = set()
 
-	query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
-		" WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326) " +
-		" and visible=true and current=true;")
-	cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
-	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
-	cur.execute(query, bbox)
+	if bbox is not None:
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
+			" WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326) " +
+			" and visible=true and current=true;")
+		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
+		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+		cur.execute(query, bbox)
+	else:
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
+			" WHERE ST_Contains(ST_GeomFromText(%s, 4326), geom) " +
+			" and visible=true and current=true;")
+		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
+		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+		cur.execute(query, [shpStr])
 
 	for row in cur:
 		nid = row["id"]
