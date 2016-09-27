@@ -20,7 +20,7 @@ if __name__=="__main__":
 	cur.execute(query, bbox)
 	for row in cur:
 		count+= 1
-		if count % 1000000:
+		if count % 1000000 == 0:
 			print count
 		nid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
@@ -38,7 +38,7 @@ if __name__=="__main__":
 
 	for row in cur:
 		count += 1
-		if count % 1000000:
+		if count % 1000000 == 0:
 			print count
 		wid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
@@ -57,7 +57,7 @@ if __name__=="__main__":
 
 	for row in cur:
 		count += 1
-		if count % 1000000:
+		if count % 1000000 == 0:
 			print count
 		wid = row["id"]
 		mems = []
