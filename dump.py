@@ -66,14 +66,14 @@ if __name__=="__main__":
 		count += 1
 		if count % 1000000 == 0:
 			print count, "relations"
-		wid = row["id"]
+		rid = row["id"]
 		mems = []
 		for (memTy, memId), memRole in zip(row["members"], row["memberroles"]):
 			mems.append((memTy, memId, memRole))
 		
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"], row["visible"])
-		enc.StoreWay(wid, metaData, row["tags"], mems)
+		enc.StoreRelation(rid, metaData, row["tags"], mems)
 
 	cur.close()
 	print "num relatons", count

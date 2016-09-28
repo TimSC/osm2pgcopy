@@ -52,6 +52,9 @@ import gzip, json, sys, hashlib, os, bz2
 # planet_relation_mems_r  |       112434 |             |      5898240 | 8256 kB    | 2496 kB    |            | 5760 kB
 # planet_relation_mems_n  |  1.78653e+06 |             |     93265920 | 127 MB     | 38 MB      |            | 89 MB
 
+#COPY planet_relations TO PROGRAM 'gzip > /home/postgres/dumprelations.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
+
+
 class CsvStore(object):
 
 	def __init__(self, outPrefix):

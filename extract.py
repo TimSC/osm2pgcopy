@@ -111,12 +111,12 @@ if __name__=="__main__":
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
 	#left,bottom,right,top
 	bbox = None
-	bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
+	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
 	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
 	
 	shpStr = None
 	#shpStr = ShpFileToLineString("shapes/hayling.shp")
-	#shpStr = ShpFileToLineString("shapes/ontario.shp")
+	shpStr = ShpFileToLineString("shapes/ontario.shp")
 
 	fi = gzip.open("extract.o5m.gz", "wb")
 	enc = o5m.O5mEncode(fi)
