@@ -1,3 +1,6 @@
 [submodule "pyo5m"]
 	path = pyo5m
 	url = https://github.com/TimSC/pyo5m.git
+[submodule "cppo5m"]
+	path = cppo5m
+	url = https://github.com/TimSC/cppo5m
