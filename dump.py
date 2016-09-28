@@ -28,6 +28,9 @@ if __name__=="__main__":
 			row["changeset"], row["uid"], row["username"], row["visible"])
 		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
 
+		if count >= 100000:
+			exit(0)
+
 	cur.close()
 	print "num nodes", count
 	enc.Reset()
