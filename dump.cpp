@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 	sql << "nodes WHERE visible=true and current=true;";
 
 	pqxx::work work(dbconn);
-	pqxx::icursorstream cursor( work, sql.str(), "nodecursor", 50 );	
+	pqxx::icursorstream cursor( work, sql.str(), "nodecursor", 1000 );	
 	uint64_t count = 0;
 	class MetaData metaData;
 	JsonToStringMap handler;
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 			enc.StoreNode(objId, metaData, handler.tagMap, lat, lon);
 		}
 
-		if (count >= 1000000)
+		if (count >= 3000000)
 			exit(0);
 	}
 

@@ -36,7 +36,7 @@ if __name__=="__main__":
 			lastUpdateCount = count
 			lastUpdateTime = timeNow
 
-		if count >= 100000:
+		if count >= 1000000:
 			exit(0)
 
 	cur.close()
