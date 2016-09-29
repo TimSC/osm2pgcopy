@@ -1,5 +1,5 @@
 from pyo5m import o5m
-import gzip, json, config, datetime
+import gzip, json, config, datetime, time
 import psycopg2, psycopg2.extras, psycopg2.extensions #apt install python-psycopg2
 
 if __name__=="__main__":
@@ -14,6 +14,8 @@ if __name__=="__main__":
 
 	#Get nodes
 	count = 0
+	lastUpdateTime = time.time()
+	lastUpdateCount = 0
 	query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
 		" WHERE visible=true and current=true;")
 	cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
@@ -27,6 +29,12 @@ if __name__=="__main__":
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"], row["visible"])
 		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
+
+		timeNow = time.time()
+		if timeNow - lastUpdateTime > 1.0:
+			print count - lastUpdateCount, "nodes/sec"
+			lastUpdateCount = count
+			lastUpdateTime = timeNow
 
 		if count >= 100000:
 			exit(0)

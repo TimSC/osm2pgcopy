@@ -5,14 +5,18 @@
 #include <iostream>
 #include <sstream>
 #include "util.h"
+#include "cppGzip/EncodeGzip.h"
 #include <assert.h>
+#include <time.h>
 using namespace std;
 
 int main(int argc, char **argv)
 {	
 	std::filebuf outfi;
-	outfi.open("o5mtest2.o5m", std::ios::out);
-	O5mEncode enc(outfi);
+	outfi.open("dump.o5m.gz", std::ios::out);
+	EncodeGzip *gzipEnc = new class EncodeGzip(outfi);
+
+	O5mEncode enc(*gzipEnc);
 	enc.StoreIsDiff(false);
 
 	string configContent;
@@ -55,10 +59,12 @@ int main(int argc, char **argv)
 	sql << "nodes WHERE visible=true and current=true;";
 
 	pqxx::work work(dbconn);
-	pqxx::icursorstream cursor( work, sql.str(), "nodecursor", 1000 );	
+	pqxx::icursorstream cursor( work, sql.str(), "nodecursor", 50 );	
 	uint64_t count = 0;
 	class MetaData metaData;
 	JsonToStringMap handler;
+	double lastUpdateTime = (double)clock() / CLOCKS_PER_SEC;
+	uint64_t lastUpdateCount = 0;
 	for ( size_t batch = 0; true; batch ++ )
 	{
 		pqxx::result rows;
@@ -92,8 +98,8 @@ int main(int argc, char **argv)
 			assert(visible && current);
 
 			int64_t objId = c[idCol].as<int64_t>();
-			double lat = c[latCol].as<double>();
-			double lon = c[lonCol].as<double>();
+			double lat = atof(c[latCol].c_str());
+			double lon = atof(c[lonCol].c_str());
 			metaData.version = c[versionCol].as<uint64_t>();
 			metaData.timestamp = c[timestampCol].as<int64_t>();
 			metaData.changeset = c[changesetCol].as<int64_t>();
@@ -104,7 +110,7 @@ int main(int argc, char **argv)
 			if (c[usernameCol].is_null())
 				metaData.username = "";
 			else
-				metaData.username = c[usernameCol].as<string>();
+				metaData.username = c[usernameCol].c_str();
 			
 			handler.tagMap.clear();
 			string tagsJson = c[tagsCol].as<string>();
@@ -119,11 +125,23 @@ int main(int argc, char **argv)
 			if(count % 1000000 == 0)
 				cout << count << " nodes" << endl;
 
+			double timeNow = (double)clock() / CLOCKS_PER_SEC;
+			if (timeNow - lastUpdateTime > 1.0)
+			{
+				cout << count - lastUpdateCount << " nodes/sec" << endl;
+				lastUpdateCount = count;
+				lastUpdateTime = timeNow;
+			}
+
 			enc.StoreNode(objId, metaData, handler.tagMap, lat, lon);
 		}
+
+		if (count >= 1000000)
+			exit(0);
 	}
 
 	enc.Finish();
+	delete gzipEnc;
 	outfi.close();
 	dbconn.disconnect ();
 	return 0;
