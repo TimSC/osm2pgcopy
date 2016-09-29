@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include "util.h"
+#include <assert.h>
 using namespace std;
 
 int main(int argc, char **argv)
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	//Dump nodes
+	cout << "Dump nodes" << endl;
 	stringstream sql;
 	sql << "SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM ";
 	sql << config["dbtableprefix"];
@@ -56,17 +57,69 @@ int main(int argc, char **argv)
 	pqxx::work work(dbconn);
 	pqxx::icursorstream cursor( work, sql.str(), "nodecursor", 1000 );	
 	uint64_t count = 0;
-	for ( size_t idx = 0; true; idx ++ )
+	class MetaData metaData;
+	JsonToStringMap handler;
+	for ( size_t batch = 0; true; batch ++ )
 	{
 		pqxx::result rows;
 		cursor.get(rows);
 		if ( rows.empty() ) break; // nothing left to read
+		if(batch == 0)
+		{
+			size_t numCols = rows.columns();
+			for(size_t i = 0; i < numCols; i++)
+			{
+				cout << i << "\t" << rows.column_name(i) << "\t" << (unsigned int)rows.column_type((pqxx::tuple::size_type)i) << endl;
+			}
+		}
+
+		int idCol = rows.column_number("id");
+		int changesetCol = rows.column_number("changeset");
+		int usernameCol = rows.column_number("username");
+		int uidCol = rows.column_number("uid");
+		int visibleCol = rows.column_number("visible");
+		int timestampCol = rows.column_number("timestamp");
+		int versionCol = rows.column_number("version");
+		int currentCol = rows.column_number("current");
+		int tagsCol = rows.column_number("tags");
+		int latCol = rows.column_number("lat");
+		int lonCol = rows.column_number("lon");
 
 		for (pqxx::result::const_iterator c = rows.begin(); c != rows.end(); ++c) {
-			//cout << "ID = " << c[0].as<int>() << endl;
+
+			bool visible = c[visibleCol].as<bool>();
+			bool current = c[currentCol].as<bool>();
+			assert(visible && current);
+
+			int64_t objId = c[idCol].as<int64_t>();
+			double lat = c[latCol].as<double>();
+			double lon = c[lonCol].as<double>();
+			metaData.version = c[versionCol].as<uint64_t>();
+			metaData.timestamp = c[timestampCol].as<int64_t>();
+			metaData.changeset = c[changesetCol].as<int64_t>();
+			if (c[uidCol].is_null())
+				metaData.uid = 0;
+			else
+				metaData.uid = c[uidCol].as<uint64_t>();
+			if (c[usernameCol].is_null())
+				metaData.username = "";
+			else
+				metaData.username = c[usernameCol].as<string>();
+			
+			handler.tagMap.clear();
+			string tagsJson = c[tagsCol].as<string>();
+			if (tagsJson != "{}")
+			{
+				Reader reader;
+				StringStream ss(tagsJson.c_str());
+				reader.Parse(ss, handler);
+			}
+
 			count ++;
 			if(count % 1000000 == 0)
 				cout << count << " nodes" << endl;
+
+			enc.StoreNode(objId, metaData, handler.tagMap, lat, lon);
 		}
 	}
 
