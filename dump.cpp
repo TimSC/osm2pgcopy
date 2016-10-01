@@ -153,7 +153,6 @@ void DumpNodes(pqxx::connection &dbconn, std::map<string, string> &config, O5mEn
 
 			enc.StoreNode(objId, metaData, tagHandler.tagMap, lat, lon);
 		}
-
 	}
 }
 
@@ -217,12 +216,12 @@ void DumpWays(pqxx::connection &dbconn, std::map<string, string> &config, O5mEnc
 
 			count ++;
 			if(count % 1000000 == 0)
-				cout << count << " nodes" << endl;
+				cout << count << " ways" << endl;
 
 			double timeNow = (double)clock() / CLOCKS_PER_SEC;
 			if (timeNow - lastUpdateTime > 30.0)
 			{
-				cout << (count - lastUpdateCount)/30.0 << " nodes/sec" << endl;
+				cout << (count - lastUpdateCount)/30.0 << " ways/sec" << endl;
 				lastUpdateCount = count;
 				lastUpdateTime = timeNow;
 			}
@@ -297,12 +296,12 @@ void DumpRelations(pqxx::connection &dbconn, std::map<string, string> &config, O
 
 			count ++;
 			if(count % 1000000 == 0)
-				cout << count << " nodes" << endl;
+				cout << count << " relations" << endl;
 
 			double timeNow = (double)clock() / CLOCKS_PER_SEC;
 			if (timeNow - lastUpdateTime > 30.0)
 			{
-				cout << (count - lastUpdateCount)/30.0 << " nodes/sec" << endl;
+				cout << (count - lastUpdateCount)/30.0 << " relations/sec" << endl;
 				lastUpdateCount = count;
 				lastUpdateTime = timeNow;
 			}
