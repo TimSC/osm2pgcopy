@@ -40,29 +40,40 @@ def CopyToDb(conn, config, filesPrefix):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
 	DbExec(cur, "COPY {0}nodes FROM PROGRAM 'zcat {1}nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "COPY {0}ways FROM PROGRAM 'zcat {1}ways.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "COPY {0}relations FROM PROGRAM 'zcat {1}relations.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 
 	DbExec(cur, "COPY {0}way_mems FROM PROGRAM 'zcat {1}waymems.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "COPY {0}relation_mems_n FROM PROGRAM 'zcat {1}relationmems-n.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "COPY {0}relation_mems_w FROM PROGRAM 'zcat {1}relationmems-w.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "COPY {0}relation_mems_r FROM PROGRAM 'zcat {1}relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
-
 	conn.commit()
 
 def CreateIndices(conn, config):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}nodes_id ON {0}nodes (id, version);".format(config["dbtableprefix"]))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}ways_id ON {0}ways (id, version);".format(config["dbtableprefix"]))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relations_id ON {0}relations (id, version);".format(config["dbtableprefix"]))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}nodes_gix ON {0}nodes USING GIST (geom);".format(config["dbtableprefix"]))
+	conn.commit()
 
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}way_mems_mids ON {0}way_mems (member);".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_n_mids ON {0}relation_mems_n (member);".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_w_mids ON {0}relation_mems_w (member);".format(config["dbtableprefix"], filesPrefix))
+	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(config["dbtableprefix"], filesPrefix))
-
 	conn.commit()
 
 if __name__=="__main__":
