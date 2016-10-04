@@ -4,7 +4,7 @@ Convert OSM format to postgresql/postgis COPY csv dump, used for fast import. Th
 Install and configure postgis
 =============================
 
-    sudo apt install postgis postgresql
+    sudo apt install postgis postgresql postgresql-9.5-postgis-2.2
 
 Create the database and user. Generate your own secret password (the colon character should not be used). The user postgres exists on many linux systems and is the default admin account for postgres.
     
@@ -32,13 +32,15 @@ Disconnect using ctrl-D. As the user postgres, enable postgis on the database.
 
 	CREATE EXTENSION address_standardizer_data_us;
 	
-Disconnect using ctrl-D to get back to your normal user. Check you can connect using psql; it often works out of the box. If necessary, enable log in by password by changing pg_hba.conf as administrator. When connecting, use 127.0.0.1 rather than localhost, if the database is on the same machine (postgresql treats them differently).
+Disconnect using ctrl-D to get back to your normal user. Check you can connect using psql; it often works out of the box. 
+
+    psql -h 127.0.0.1 -d db_map -U microcosm --password
+
+If necessary, enable log in by password by changing pg_hba.conf as administrator. When connecting, use 127.0.0.1 rather than localhost, if the database is on the same machine (postgresql treats them differently).
 
 	locate pg_hba.conf
 
 	sudo nano /etc/postgresql/9.5/main/pg_hba.conf
-
-	psql -h 127.0.0.1 -d db_map -U microcosm --password
 
 Update the configuration files with your new password. Use 127.0.0.1 rather than localhost, if the database is on the same machine.
 
@@ -75,11 +77,11 @@ And wait for a while. You can see the results and change permissions so it can b
 
 Run the copytodb.py script using the postgres user on the machine running the database (since we are going to be modifying permissions and doing COPY commands). 
 
-	sudo su progres
+	sudo su postgres
 	
 	python copytodb.py /full/path/to/greece-
 
-Select the options presented in order. This creates the tables, copies the data and creates the indices. This can take a while for large areas, days for a whole planet dump!
+copytodb has an interactive command line menu. Select the options presented in order. This creates the tables, copies the data and creates the indices. This can take a while for large areas, and over a day for a whole planet dump!
 
 database dump
 =============
