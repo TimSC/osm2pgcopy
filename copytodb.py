@@ -76,6 +76,29 @@ def CreateIndices(conn, config):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(config["dbtableprefix"], filesPrefix))
 	conn.commit()
 
+def GetMaxIds(conn, config):
+
+	query = "SELECT MAX(id) FROM {0}nodes".format(config["dbtableprefix"])
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	cur.execute(query)
+	for row in cur:
+		print ("max node id:", row[0])
+
+	query = "SELECT MAX(id) FROM {0}ways".format(config["dbtableprefix"])
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	cur.execute(query)
+	for row in cur:
+		print ("max way id:", row[0])
+
+	query = "SELECT MAX(id) FROM {0}relations".format(config["dbtableprefix"])
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	cur.execute(query)
+	for row in cur:
+		print ("max relation id:", row[0])
+
 if __name__=="__main__":
 	
 	configFi = open("config.cfg", "rt")
@@ -103,6 +126,7 @@ if __name__=="__main__":
 		print ("2. Create tables in db")
 		print ("3. Copy data from csv files to db")
 		print ("4. Create indices")
+		print ("5. Get max object ids")
 		print ("q. Quit")
 
 		userIn = raw_input()
@@ -115,6 +139,8 @@ if __name__=="__main__":
 			CopyToDb(conn, config, filesPrefix)
 		elif userIn == "4":
 			CreateIndices(conn, config)
+		elif userIn == "5":
+			GetMaxIds(conn, config)
 		elif userIn == "q":
 			running = False
 
