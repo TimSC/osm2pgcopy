@@ -18,18 +18,23 @@ def DropTables(cur, config):
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_w;".format(config["dbtableprefix"]))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_r;".format(config["dbtableprefix"]))
 
+	conn.commit()
+
 def CreateTables(conn, config,):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);".format(config["dbtableprefix"]))
-	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}way_mems (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_n (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_w (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_r (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
+
+	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
+	
+	conn.commit()
 
 def CopyToDb(conn, config, filesPrefix):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -43,6 +48,8 @@ def CopyToDb(conn, config, filesPrefix):
 	DbExec(cur, "COPY {0}relation_mems_w FROM PROGRAM 'zcat {1}relationmems-w.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
 	DbExec(cur, "COPY {0}relation_mems_r FROM PROGRAM 'zcat {1}relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(config["dbtableprefix"], filesPrefix))
 
+	conn.commit()
+
 def CreateIndices(conn, config):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
@@ -55,6 +62,8 @@ def CreateIndices(conn, config):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_n_mids ON {0}relation_mems_n (member);".format(config["dbtableprefix"], filesPrefix))
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_w_mids ON {0}relation_mems_w (member);".format(config["dbtableprefix"], filesPrefix))
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(config["dbtableprefix"], filesPrefix))
+
+	conn.commit()
 
 if __name__=="__main__":
 	
