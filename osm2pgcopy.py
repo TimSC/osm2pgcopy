@@ -1,45 +1,13 @@
 from pyo5m import osmxml
 import gzip, json, sys, hashlib, os, bz2
 
-#sudo su postgres
-#psql --dbname=db_map
-#
-#DROP TABLE IF EXISTS nodes;
-#DROP TABLE IF EXISTS ways;
-#DROP TABLE IF EXISTS relations;
-#CREATE TABLE IF NOT EXISTS nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));
-#CREATE TABLE IF NOT EXISTS ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);
-#CREATE TABLE IF NOT EXISTS relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);
-
-#COPY nodes FROM '/home/postgres/copytest.csv' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-#COPY nodes FROM PROGRAM 'zcat /home/postgres/nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
 #select * from pg_stat_activity;
-
-#CREATE INDEX nodes_id ON nodes (id, version);
-#CREATE INDEX ways_id ON ways (id, version);
-#CREATE INDEX relations_id ON relations (id, version);
-#CREATE INDEX nodes_gix ON nodes USING GIST (geom);
 
 #SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM andorra_nodes WHERE geom && ST_MakeEnvelope(1.5020099, 42.5228903, 1.540173, 42.555443, 4326);
 #GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO microcosm;
 
 #CREATE INDEX nodes_gin ON nodes USING GIN (tags);
 #SELECT * FROM nodes WHERE tags ? 'amenity' LIMIT 10;
-
-#CREATE TABLE IF NOT EXISTS planet_way_mems (id BIGINT, version INTEGER, member BIGINT);
-#CREATE TABLE IF NOT EXISTS greece_relation_mems_n (id BIGINT, version INTEGER, member BIGINT);
-#CREATE TABLE IF NOT EXISTS greece_relation_mems_w (id BIGINT, version INTEGER, member BIGINT);
-#CREATE TABLE IF NOT EXISTS greece_relation_mems_r (id BIGINT, version INTEGER, member BIGINT);
-
-#COPY greece_way_mems FROM PROGRAM 'zcat /home/postgres/greece-waymems.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-#COPY greece_relation_mems_n FROM PROGRAM 'zcat /home/postgres/greece-relationmems-n.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-#COPY greece_relation_mems_w FROM PROGRAM 'zcat /home/postgres/greece-relationmems-w.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-#COPY greece_relation_mems_r FROM PROGRAM 'zcat /home/postgres/greece-relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-
-#CREATE INDEX greece_way_mems_mids ON greece_way_mems (member);
-#CREATE INDEX greece_relation_mems_n_mids ON greece_relation_mems_n (member);
-#CREATE INDEX greece_relation_mems_w_mids ON greece_relation_mems_w (member);
-#CREATE INDEX greece_relation_mems_r_mids ON greece_relation_mems_r (member);
 
 #Import from fosm.org 2015 dump
 #       table_name        | row_estimate | toast_bytes | table_bytes  |   total    |   index    |   toast    |   table    
@@ -53,7 +21,6 @@ import gzip, json, sys, hashlib, os, bz2
 # planet_relation_mems_n  |  1.78653e+06 |             |     93265920 | 127 MB     | 38 MB      |            | 89 MB
 
 #COPY planet_relations TO PROGRAM 'gzip > /home/postgres/dumprelations.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');
-
 
 class CsvStore(object):
 
