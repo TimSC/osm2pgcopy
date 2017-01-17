@@ -5,6 +5,7 @@ if __name__=="__main__":
 	chunk_size = 1024*1024
 	done = False
 	sleepTime = 60
+	s = requests.Session()
 
 	while not done:
 		try:
@@ -14,7 +15,7 @@ if __name__=="__main__":
 				localpath = "{0}/".format(i)
 
 				if not os.path.exists(localpath):
-					resp = requests.get(url1)
+					resp = s.get(url1)
 					if resp.status_code != 200:
 						break
 
@@ -23,7 +24,7 @@ if __name__=="__main__":
 					localpath2 = "{0}{1:03d}/".format(localpath, j)
 
 					if not os.path.exists(localpath2):
-						resp = requests.get(url2)
+						resp = s.get(url2)
 						if resp.status_code != 200:
 							break
 
@@ -35,7 +36,7 @@ if __name__=="__main__":
 						oscUrl = "{0}{1:03d}.osc.gz".format(url2,k)
 						oscFina = "{0}{1:03d}.osc.gz".format(localpath2,k)
 						if not os.path.exists(oscFina):
-							resp = requests.get(oscUrl)	
+							resp = s.get(oscUrl)	
 							if resp.status_code == 200:
 								fi = open(oscFina, "wb")
 								for chunk in resp.iter_content(chunk_size):
@@ -45,7 +46,7 @@ if __name__=="__main__":
 						stateUrl = "{0}{1:03d}.state.txt".format(url2,k)
 						stateFina = "{0}{1:03d}.state.txt".format(localpath2,k)
 						if not os.path.exists(stateFina):
-							resp = requests.get(stateUrl)	
+							resp = s.get(stateUrl)	
 							if resp.status_code == 200:
 								fi = open(stateFina, "wb")
 								for chunk in resp.iter_content(chunk_size):
@@ -53,6 +54,7 @@ if __name__=="__main__":
 								fi.close()
 
 						sleepTime = 60
+
 
 			done = True
 
