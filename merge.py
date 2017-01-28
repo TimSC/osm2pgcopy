@@ -148,15 +148,22 @@ if __name__ == "__main__":
 	#102/552 : Day before planet dump
 	#102/556 : All new data
 
-	for i in range(552, 1000):
-		for j in range(0, 1000):
-			fina = "102/{0:03d}/{1:03d}.osc.gz".format(i, j)
-			if os.path.exists(fina):
-				ProcessFile(fina, conn)
-
-	#for i in range(0, 185):
+	#for i in range(552, 1000):
 	#	for j in range(0, 1000):
-	#		fina = "103/{0:03d}/{1:03d}.osc.gz".format(i, j)
+	#		fina = "102/{0:03d}/{1:03d}.osc.gz".format(i, j)
 	#		if os.path.exists(fina):
 	#			ProcessFile(fina, conn)
+	cursor = None
 
+	for a in range(103, 104):
+		for i in range(323, 1000):
+			for j in range(0, 1000):
+				fina = "{0:03d}/{1:03d}/{2:03d}.osc.gz".format(a, i, j)
+				if os.path.exists(fina):
+					ProcessFile(fina, conn)
+					cursor = (a, i, j)
+
+	if cursor is not None:
+		cursorFi = open("mergecursor.txt", "wt")
+		cursorFi.write(",".join(map(str, cursor))+"\n")
+		cursorFi.close()

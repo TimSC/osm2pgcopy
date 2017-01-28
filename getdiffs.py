@@ -1,6 +1,10 @@
 import requests, os, time
 
 if __name__=="__main__":
+	abspath = os.path.abspath(__file__)
+	dname = os.path.dirname(abspath)
+	os.chdir(dname)
+
 	url = "http://fosm.org/planet/minute-replicate/"
 	chunk_size = 1024*1024
 	done = False
@@ -30,6 +34,11 @@ if __name__=="__main__":
 
 					if not os.path.exists(localpath2):
 						os.makedirs(localpath2) #Potential race, if running many instances
+
+					oscFina = "{0}{1:03d}.osc.gz".format(localpath2,999)
+					stateFina = "{0}{1:03d}.state.txt".format(localpath2,999)
+					if os.path.exists(oscFina) and os.path.exists(stateFina):
+						continue #This folder is probably complete because last files exist
 
 					for k in range(1000):
 						print i, j, k
