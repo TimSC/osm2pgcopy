@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import requests, os, time
 
 if __name__=="__main__":
@@ -12,9 +13,13 @@ if __name__=="__main__":
 	s = requests.Session()
 	downloadingOk = True
 	cursor = None
-	i = 103
-	j = 0
-	k = 0
+	cursorStatus = None 
+	
+	try:
+		cursorFile = open("diffcursor.txt", "rt").read().split("\n")
+		i, j, k = map(int, cursorFile[0].split(","))
+	except IOError:
+		i, j, k = 103, 0, 0
 
 	while not done:
 		try:
@@ -40,12 +45,6 @@ if __name__=="__main__":
 					if not os.path.exists(localpath2):
 						os.makedirs(localpath2) #Potential race, if running many instances
 
-					oscFina = "{0}{1:03d}.osc.gz".format(localpath2,999)
-					stateFina = "{0}{1:03d}.state.txt".format(localpath2,999)
-					if os.path.exists(oscFina) and os.path.exists(stateFina):
-						j += 1
-						continue #This folder is probably complete because last files exist
-
 					while k < 1000:
 						print i, j, k
 						singlePairOk = True
@@ -66,16 +65,20 @@ if __name__=="__main__":
 						stateUrl = "{0}{1:03d}.state.txt".format(url2,k)
 						stateFina = "{0}{1:03d}.state.txt".format(localpath2,k)
 						if not os.path.exists(stateFina):
-							resp = s.get(stateUrl)	
+							resp = s.get(stateUrl)
+							statusData = []
 							if resp.status_code == 200:
 								fi = open(stateFina, "wb")
 								for chunk in resp.iter_content(chunk_size):
-									fi.write(chunk)
+									statusData.append(chunk)
+								fi.write(u"".join(statusData))
 								fi.close()
 							else:
 								singlePairOk = False
 							if resp.status_code == 404:
 								downloadingOk = False
+						else:
+							statusData = [open(stateFina, "rb").read()]
 
 						sleepTime = 60
 						if not downloadingOk:
@@ -83,6 +86,7 @@ if __name__=="__main__":
 
 						if singlePairOk:
 							cursor = (i,j,k)
+							cursorStatus = statusData
 						k += 1
 
 					if not downloadingOk:
@@ -106,4 +110,5 @@ if __name__=="__main__":
 	if cursor is not None:
 		fi = open("diffcursor.txt", "wt")
 		fi.write(",".join(map(str, cursor))+"\n")
+		fi.write(u"".join(cursorStatus))
 		fi.close()
