@@ -10,11 +10,16 @@ if __name__=="__main__":
 	done = False
 	sleepTime = 60
 	s = requests.Session()
+	downloadingOk = True
+	cursor = None
+	i = 103
+	j = 0
+	k = 0
 
 	while not done:
 		try:
 
-			for i in range(103,104):
+			while i < 104:
 				url1 = "{0}{1:03d}/".format(url,i)
 				localpath = "{0}/".format(i)
 
@@ -23,7 +28,7 @@ if __name__=="__main__":
 					if resp.status_code != 200:
 						break
 
-				for j in range(0,1000):
+				while j < 1000:
 					url2 = "{0}{1:03d}/".format(url1,j)
 					localpath2 = "{0}{1:03d}/".format(localpath, j)
 
@@ -38,10 +43,12 @@ if __name__=="__main__":
 					oscFina = "{0}{1:03d}.osc.gz".format(localpath2,999)
 					stateFina = "{0}{1:03d}.state.txt".format(localpath2,999)
 					if os.path.exists(oscFina) and os.path.exists(stateFina):
+						j += 1
 						continue #This folder is probably complete because last files exist
 
-					for k in range(1000):
+					while k < 1000:
 						print i, j, k
+						singlePairOk = True
 						oscUrl = "{0}{1:03d}.osc.gz".format(url2,k)
 						oscFina = "{0}{1:03d}.osc.gz".format(localpath2,k)
 						if not os.path.exists(oscFina):
@@ -51,6 +58,10 @@ if __name__=="__main__":
 								for chunk in resp.iter_content(chunk_size):
 									fi.write(chunk)
 								fi.close()
+							else:
+								singlePairOk = False
+							if resp.status_code == 404:
+								downloadingOk = False
 
 						stateUrl = "{0}{1:03d}.state.txt".format(url2,k)
 						stateFina = "{0}{1:03d}.state.txt".format(localpath2,k)
@@ -61,9 +72,29 @@ if __name__=="__main__":
 								for chunk in resp.iter_content(chunk_size):
 									fi.write(chunk)
 								fi.close()
+							else:
+								singlePairOk = False
+							if resp.status_code == 404:
+								downloadingOk = False
 
 						sleepTime = 60
+						if not downloadingOk:
+							break
 
+						if singlePairOk:
+							cursor = (i,j,k)
+						k += 1
+
+					if not downloadingOk:
+						break
+
+					j += 1
+					k = 0
+
+				if not downloadingOk:
+					break
+				i += 1
+				j = 0
 
 			done = True
 
@@ -72,3 +103,7 @@ if __name__=="__main__":
 			sleepTime *= 2
 			time.sleep(sleepTime)
 
+	if cursor is not None:
+		fi = open("diffcursor.txt", "wt")
+		fi.write(",".join(map(str, cursor))+"\n")
+		fi.close()
