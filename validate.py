@@ -1,5 +1,5 @@
 from pyo5m import o5m
-import gzip, sys
+import gzip, sys, os
 
 class Validator(object):
 	def __init__(self):
@@ -30,12 +30,17 @@ class Validator(object):
 		self.relationIds.add(objectId)
 
 if __name__=="__main__":
-	fina = "uk-and-ireland-fosm-2017-01-29.o5m.gz"
+	fina = "extract.o5m.gz"
 	if len(sys.argv) >= 2:
 		fina = sys.argv[1]
 
-	fi = gzip.open(fina, "rb")
+	ext = os.path.splitext(fina)[1]
 
+	if ext != ".gz":
+		fi = open(fina, "rb")
+	else:
+		fi = gzip.open(fina, "rb")
+	
 	dec = o5m.O5mDecode(fi)
 	validator = Validator()
 	dec.funcStoreNode = validator.StoreNode

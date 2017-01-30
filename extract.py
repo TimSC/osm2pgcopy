@@ -1,4 +1,4 @@
-from pyo5m import o5m
+from pyo5m import o5m, osmxml
 import gzip, json, config, datetime
 import psycopg2, psycopg2.extras, psycopg2.extensions #apt install python-psycopg2
 
@@ -119,8 +119,15 @@ if __name__=="__main__":
 	#shpStr = ShpFileToLineString("shapes/hayling.shp")
 	#shpStr = ShpFileToLineString("shapes/ontario.shp")
 
-	fi = gzip.open("extract.o5m.gz", "wb")
-	enc = o5m.O5mEncode(fi)
+	if 1:
+		fi = gzip.open("extract.o5m.gz", "wb")
+		enc = o5m.O5mEncode(fi)
+	if 0:
+		fi = gzip.open("extract.osm.gz", "wb")
+		enc = osmxml.OsmXmlEncode(fi)
+	if 0:
+		fi = open("extract.osm", "wt")
+		enc = osmxml.OsmXmlEncode(fi)
 	enc.StoreIsDiff(False)
 	if bbox is not None:
 		enc.StoreBounds(bbox)
@@ -172,6 +179,7 @@ if __name__=="__main__":
 	print "extraNodeIds", len(extraNodeIds)
 
 	#Get nodes to complete ways
+	qids = []
 	cursor = 0
 	for qid in extraNodeIds:
 		qids.append(qid)
@@ -188,6 +196,7 @@ if __name__=="__main__":
 
 	#Send ways to output encoder
 	print "encoding ways"
+	qids = []
 	cursor = 0
 	for qid in knownWayIds:
 		qids.append(qid)
@@ -212,6 +221,7 @@ if __name__=="__main__":
 		GetRelationsForObjects(conn, "n", qids, knownRelationIds, knownRelationIds, enc)
 	print "num relations from nodes", len(knownRelationIds)
 	
+	qids = []
 	cursor = 0
 	relationsFromWays = set()
 	for qid in knownWayIds:
@@ -228,6 +238,7 @@ if __name__=="__main__":
 	seekingRelIds = knownRelationIds
 	for i in range(10):
 		cursor = 0
+		qids = []
 		extraRelationIds = set()
 		for qid in seekingRelIds:
 			qids.append(qid)
