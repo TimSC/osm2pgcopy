@@ -92,6 +92,7 @@ def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, 
 			metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 				row["changeset"], row["uid"], row["username"], row["visible"])
 			enc.StoreRelation(rid, metaData, row["tags"], mems)
+			knownRelationIds.add(rid)
 
 	cur.close()
 
@@ -211,6 +212,7 @@ if __name__=="__main__":
 
 	#Get relations for these objects
 	cursor = 0
+	qids = []
 	knownRelationIds = set()
 	for qid in knownNodeIds:
 		qids.append(qid)
