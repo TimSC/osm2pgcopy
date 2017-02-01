@@ -237,7 +237,7 @@ if __name__=="__main__":
 	knownRelationIds.update(relationsFromWays)
 
 	#Get relations of relations
-	seekingRelIds = knownRelationIds
+	seekingRelIds = knownRelationIds.copy()
 	for i in range(10):
 		cursor = 0
 		qids = []
