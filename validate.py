@@ -1,6 +1,8 @@
 from pyo5m import o5m
 import gzip, sys, os
 
+#Validate an extract
+
 class Validator(object):
 	def __init__(self):
 		self.nodeIds = set()

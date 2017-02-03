@@ -1,5 +1,5 @@
 from pyo5m import o5m, osmxml
-import gzip, json, config, datetime
+import gzip, json, config, datetime, sys
 import psycopg2, psycopg2.extras, psycopg2.extensions #apt install python-psycopg2
 
 def GetWaysForNodes(conn, qids, nodeIds, extraNodeIds, knownWayIds):
@@ -109,19 +109,22 @@ def ShpFileToLineString(fina):
 	return shpStr
 
 if __name__=="__main__":
+	outFina = "australia.osm.gz"
+
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
 	#left,bottom,right,top
 	bbox = None
 	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
 	bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
 	#bbox = [-16.6113281,49.6676278,2.3730469,62.6741433] #UK and Ireland
+	#bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
 	
 	shpStr = None
 	#shpStr = ShpFileToLineString("shapes/hayling.shp")
 	#shpStr = ShpFileToLineString("shapes/ontario.shp")
 
 	if 1:
-		fi = gzip.open("extract.o5m.gz", "wb")
+		fi = gzip.open(outFina, "wb")
 		enc = o5m.O5mEncode(fi)
 	if 0:
 		fi = gzip.open("extract.osm.gz", "wb")
@@ -234,7 +237,6 @@ if __name__=="__main__":
 	if len(qids) > 0:
 		GetRelationsForObjects(conn, "w", qids, knownRelationIds, relationsFromWays, enc)
 	print "num relations from ways", len(relationsFromWays)
-	knownRelationIds.update(relationsFromWays)
 
 	#Get relations of relations
 	seekingRelIds = knownRelationIds.copy()
@@ -246,11 +248,11 @@ if __name__=="__main__":
 			qids.append(qid)
 			if len(qids) >= step:
 				GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds, enc)
+				qids = []
 		if len(qids) > 0:
 			GetRelationsForObjects(conn, "r", qids, knownRelationIds, extraRelationIds, enc)
-		print "extraRelationIds", len(extraRelationIds)
+		print i, "extraRelationIds", len(extraRelationIds)
 		
-		knownRelationIds.update(extraRelationIds)
 		if len(extraRelationIds) == 0:
 			break
 		seekingRelIds = extraRelationIds
