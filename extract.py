@@ -31,14 +31,14 @@ def GetWaysForNodes(conn, qids, knownNodeIds, extraNodeIds, wayIdsToFind):
 def GetChildNodesForWays(conn, wayIdsToFind, knownNodeIds, extraNodeIds):
 	sqlFrags = []
 	wayTable = "{0}ways".format(config.dbtableprefix)
-	for qid in qids:
+	for qid in wayIdsToFind:
 		sqlFrags.append("id = %s")
 
 	sql = "SELECT * FROM {0} WHERE current = true and visible = true AND ({1});".format(wayTable, " OR ".join(sqlFrags))
 
 	cur = conn.cursor('query-ways-cursor', cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
-	cur.execute(sql, qids)
+	cur.execute(sql, wayIdsToFind)
 	
 	for row in cur:
 		for mem in row["members"]:
@@ -63,7 +63,7 @@ def GetNodesById(conn, qids, outEnc):
 		nid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"], row["visible"])
-		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
+		outEnc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
 
 	cur.close()
 
@@ -83,11 +83,11 @@ def GetWaysById(conn, qids, outEnc):
 		wid = row["id"]
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"], row["visible"])
-		enc.StoreWay(wid, metaData, row["tags"], row["members"])
+		outEnc.StoreWay(wid, metaData, row["tags"], row["members"])
 
 	cur.close()
 
-def GetRelationsById(conn, qids, knownRelationIds, enc):
+def GetRelationsById(conn, qids, knownRelationIds, outEnc):
 	sqlFrags = []
 	for qid in qids:
 		if qid in knownRelationIds:
@@ -108,7 +108,7 @@ def GetRelationsById(conn, qids, knownRelationIds, enc):
 			mems.append((memTy, memId, memRole))
 		metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 			row["changeset"], row["uid"], row["username"], row["visible"])
-		enc.StoreRelation(rid, metaData, row["tags"], mems)
+		outEnc.StoreRelation(rid, metaData, row["tags"], mems)
 
 	cur.close()
 
@@ -152,11 +152,15 @@ def ShpFileToLineString(fina):
 	shpStr = "POLYGON(({0}))".format(",".join(ptStrs))
 	return shpStr
 
-def CompleteQuery(queryNodes, knownNodeIds, queryWays, queryRelations, enc):
-	
+def CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc):
+	queryNodes = set(queryNodes)
+	queryWays = set(queryWays)
+	queryRelations = set(queryRelations)
+
 	#Add query nodes that are not known
 	nodesToFind = queryNodes.difference(knownNodeIds)
 	
+	step = 100
 	qids = []
 	for qid in nodesToFind:
 		qids.append(qid)
@@ -169,11 +173,9 @@ def CompleteQuery(queryNodes, knownNodeIds, queryWays, queryRelations, enc):
 	del nodesToFind
 
 	#Get ways for these nodes, then find node ids to complete them
-	step = 100
 
 	qids = []
 	extraNodeIds = set()
-	queryWays = set(queryWays)
 	wayIdsToFind = queryWays.copy()
 	for qid in knownNodeIds:
 		qids.append(qid)
@@ -281,15 +283,15 @@ def CompleteQuery(queryNodes, knownNodeIds, queryWays, queryRelations, enc):
 
 
 if __name__=="__main__":
-	outFina = "uk-eire.osm.gz"
+	outFina = "extract.osm.gz"
 
 	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
 	#left,bottom,right,top
 	bbox = None
-	bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
+	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
 	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
 	#bbox = [-16.6113281,49.6676278,2.3730469,62.6741433] #UK and Ireland
-	#bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
+	bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
 	
 	shpStr = None
 	#shpStr = ShpFileToLineString("shapes/hayling.shp")
@@ -339,7 +341,7 @@ if __name__=="__main__":
 	queryWays = []
 	queryRelations = []
 
-	CompleteQuery(queryNodes, knownNodeIds, queryWays, queryRelations, enc)
+	CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc)
 
 	enc.Finish()
 	fi.close()
