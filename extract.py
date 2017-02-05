@@ -112,6 +112,32 @@ def GetRelationsById(conn, qids, knownRelationIds, outEnc):
 
 	cur.close()
 
+def GetRelationsMembers(conn, qids, extraNodesOut, extraWaysOut, extraRelationsOut):
+	sqlFrags = []
+	for qid in qids:
+		sqlFrags.append("id = %s")
+	query = ("SELECT * FROM {0}relations".format(config.dbtableprefix) +
+		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
+	cur = conn.cursor('relation-by-id-cursor', cursor_factory=psycopg2.extras.DictCursor)
+	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	cur.execute(query, qids)
+	count = 0
+
+	for row in cur:
+		count += 1
+		rid = row["id"]
+		for (memTy, memId), memRole in zip(row["members"], row["memberroles"]):
+			if memTy == "node":
+				extraNodesOut.add(memId)
+			elif memTy == "way":
+				extraWaysOut.add(memId)
+			elif memTy == "relation":
+				extraRelationsOut.add(memId)
+			else:
+				raise RuntimeError("Unknown member type: "+str(memTy))
+	
+	cur.close()
+
 def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, encOut):
 	#print qids
 	sqlFrags = []
@@ -135,7 +161,7 @@ def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, 
 				mems.append((memTy, memId, memRole))
 			metaData = (row["version"], datetime.datetime.fromtimestamp(row["timestamp"]),
 				row["changeset"], row["uid"], row["username"], row["visible"])
-			enc.StoreRelation(rid, metaData, row["tags"], mems)
+			encOut.StoreRelation(rid, metaData, row["tags"], mems)
 			knownRelationIds.add(rid)
 
 	cur.close()
@@ -157,10 +183,23 @@ def CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc
 	queryWays = set(queryWays)
 	queryRelations = set(queryRelations)
 
-	#Add query nodes that are not known
-	nodesToFind = queryNodes.difference(knownNodeIds)
-	
+	#Get member nodes and ways for queryRelations
 	step = 100
+	qids = []
+	extraNodes, extraWays, extraRelations = set(), set(), set()
+	for qid in queryRelations:
+		qids.append(qid)
+		if len(qids) >= step:
+			GetRelationsMembers(conn, qids, extraNodes, extraWays, extraRelations)
+			qids = []
+	if len(qids) > 0:
+		GetRelationsMembers(conn, qids, extraNodes, extraWays, extraRelations)
+
+	#Add query nodes that are not known
+	nodesToFind = queryNodes.copy()
+	nodesToFind.update(extraNodes)
+	nodesToFind = nodesToFind.difference(knownNodeIds)
+	
 	qids = []
 	for qid in nodesToFind:
 		qids.append(qid)
@@ -190,7 +229,9 @@ def CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc
 
 	#Get node ids for query ways
 	qids = []
-	for qid in queryWays:
+	waysToFind = queryWays.copy()
+	waysToFind.update(extraWays)
+	for qid in waysToFind:
 		qids.append(qid)
 		if len(qids) >= step:
 			GetChildNodesForWays(conn, qids, knownNodeIds, extraNodeIds)
@@ -255,7 +296,9 @@ def CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc
 	#Get query relation ids
 	qids = []
 	relationsFromQueryRelations = set()
-	for qid in queryRelations:
+	relationsToFind = waysToFind.copy()
+	relationsToFind.update(extraRelations)
+	for qid in relationsToFind:
 		qids.append(qid)
 		if len(qids) >= step:
 			GetRelationsById(conn, qids, knownRelationIds, enc)
