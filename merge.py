@@ -156,7 +156,7 @@ if __name__ == "__main__":
 	cursor = None
 
 	for a in range(103, 104):
-		for i in range(323, 1000):
+		for i in range(548, 1000):
 			for j in range(0, 1000):
 				fina = "{0:03d}/{1:03d}/{2:03d}.osc.gz".format(a, i, j)
 				if os.path.exists(fina):

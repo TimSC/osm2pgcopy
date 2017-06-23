@@ -36,9 +36,6 @@ if __name__=="__main__":
 			lastUpdateCount = count
 			lastUpdateTime = timeNow
 
-		if count >= 1000000:
-			exit(0)
-
 	cur.close()
 	print "num nodes", count
 	enc.Reset()

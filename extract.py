@@ -334,7 +334,8 @@ if __name__=="__main__":
 	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
 	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
 	#bbox = [-16.6113281,49.6676278,2.3730469,62.6741433] #UK and Ireland
-	bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
+	#bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
+	bbox = [-1.1473846,50.7360206,-0.9901428,50.8649113] #Portsmouth, UK
 	
 	shpStr = None
 	#shpStr = ShpFileToLineString("shapes/hayling.shp")
