@@ -1,4 +1,4 @@
-from pyo5m import osmxml
+from pyo5m import osmxml, o5m
 import gzip, json, sys, hashlib, os, bz2
 
 #select * from pg_stat_activity;
@@ -146,14 +146,20 @@ if __name__=="__main__":
 	if len(sys.argv) >= 3:
 		outPrefix = sys.argv[2]
 
-	splitFina = os.path.splitext(inFina)
-	if splitFina[1] == ".gz":
+	splitFina = inFina.split(".")
+	if splitFina[-1] == "gz":
 		fi = gzip.open(inFina, "rt")
-	elif splitFina[1] == ".bz2":
+	elif splitFina[-1] == "bz2":
 		fi = bz2.BZ2File(inFina, "r")
 	else:
 		fi = open(inFina, "rt")
-	dec = osmxml.OsmXmlDecode(fi)
+
+	if splitFina[-2] == "o5m":
+		dec = o5m.O5mDecode(fi)
+		dec.DecodeHeader()
+	else:
+		dec = osmxml.OsmXmlDecode(fi)
+
 	csvStore = CsvStore(outPrefix)
 	dec.funcStoreNode = csvStore.FuncStoreNode
 	dec.funcStoreWay = csvStore.FuncStoreWay
