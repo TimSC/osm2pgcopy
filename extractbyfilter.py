@@ -6,11 +6,13 @@ def CheckTags(tags):
 	select = False
 	tags = row["tags"]
 	if "natural" in tags:
-		if tags["natural"] in ["coastline", "water"]: select = True
+	#	if tags["natural"] in ["coastline"]: select = True #"water"
+		if tags["natural"] == "water" and "water" in tags and tags["water"] == "river":
+			select = True
 	if "waterway" in tags:
 		if tags["waterway"] == "riverbank": select = True
-	if "landuse" in tags:
-		if tags["landuse"] == "reservoir": select = True
+	#if "landuse" in tags:
+	#	if tags["landuse"] == "reservoir": select = True
 	return select
 
 if __name__=="__main__":
