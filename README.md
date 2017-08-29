@@ -36,7 +36,7 @@ Disconnect using ctrl-D to get back to your normal user. Check you can connect u
 
     psql -h 127.0.0.1 -d db_map -U microcosm --password
 
-If necessary, enable log in by password by changing pg_hba.conf as administrator. When connecting, use 127.0.0.1 rather than localhost, if the database is on the same machine (postgresql treats them differently).
+If necessary, enable log in by password by changing pg_hba.conf as administrator https://stackoverflow.com/a/4328789/4288232 . When connecting, use 127.0.0.1 rather than localhost, if the database is on the same machine (postgresql treats them differently).
 
 	locate pg_hba.conf
 
@@ -88,7 +88,7 @@ database dump
 
 The current fastest method is to use the C++ dump program.
 
-	sudo apt install libpqxx-dev 
+	sudo apt install libpqxx-dev rapidjson-dev
 
 	make
 
