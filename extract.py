@@ -1,5 +1,5 @@
 from pyo5m import o5m, osmxml
-import gzip, json, config, datetime, sys
+import gzip, json, config, datetime, sys, time
 import psycopg2, psycopg2.extras, psycopg2.extensions #apt install python-psycopg2
 
 def GetWaysForNodes(conn, qids, knownNodeIds, extraNodeIds, wayIdsToFind):
@@ -333,9 +333,9 @@ if __name__=="__main__":
 	bbox = None
 	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
 	#bbox = [108.4570313, -45.9511497, 163.4765625, -8.5810212] #Australia
-	bbox = [-16.6113281,49.6676278,2.3730469,62.6741433] #UK and Ireland
+	#bbox = [-16.6113281,49.6676278,2.3730469,62.6741433] #UK and Ireland
 	#bbox = [0.453186,50.8302282,1.4804077,51.5155798] #East Kent, UK
-	#bbox = [-1.1473846,50.7360206,-0.9901428,50.8649113] #Portsmouth, UK
+	bbox = [-1.1473846,50.7360206,-0.9901428,50.8649113] #Portsmouth, UK
 	#bbox = [-74.734, 44.968, -72.723, 46.057] #montreal_canada
 
 	shpStr = None
@@ -357,18 +357,17 @@ if __name__=="__main__":
 
 	#Get nodes within bbox
 	knownNodeIds = set()
+	startTime = time.time()
 
 	if bbox is not None:
-		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
-			" WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326) " +
-			" and visible=true and current=true;")
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config.dbtableprefix) +
+			" WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326);")
 		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
 		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 		cur.execute(query, bbox)
 	else:
-		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
-			" WHERE ST_Contains(ST_GeomFromText(%s, 4326), geom) " +
-			" and visible=true and current=true;")
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config.dbtableprefix) +
+			" WHERE ST_Contains(ST_GeomFromText(%s, 4326), geom);")
 		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
 		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 		cur.execute(query, [shpStr])
@@ -381,7 +380,7 @@ if __name__=="__main__":
 		enc.StoreNode(nid, metaData, row["tags"], (row["lat"], row["lon"]))
 
 	cur.close()
-	print "num nodes", len(knownNodeIds)
+	print "num nodes", len(knownNodeIds), "in", time.time() - startTime
 	queryNodes = knownNodeIds
 	queryWays = []
 	queryRelations = []

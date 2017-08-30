@@ -22,6 +22,8 @@ Disconnect using ctrl-D. As the user postgres, enable postgis on the database.
 
     psql --dbname=db_map
 
+	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO microcosm;
+
 	CREATE EXTENSION postgis;
 
 	CREATE EXTENSION postgis_topology;

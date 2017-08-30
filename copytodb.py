@@ -9,6 +9,8 @@ def DbExec(cur, sql):
 def DropTables(cur, config):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}livenodes;".format(config["dbtableprefix"]))
+
 	DbExec(cur, "DROP TABLE IF EXISTS {0}nodes;".format(config["dbtableprefix"]))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}ways;".format(config["dbtableprefix"]))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relations;".format(config["dbtableprefix"]))
@@ -27,10 +29,10 @@ def CreateTables(conn, config,):
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);".format(config["dbtableprefix"]))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);".format(config["dbtableprefix"]))
 
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}way_mems (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_n (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_w (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_r (id BIGINT, version INTEGER, member BIGINT);".format(config["dbtableprefix"]))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}way_mems (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(config["dbtableprefix"]))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_n (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(config["dbtableprefix"]))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_w (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(config["dbtableprefix"]))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_r (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(config["dbtableprefix"]))
 
 	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
 	
@@ -58,23 +60,38 @@ def CopyToDb(conn, config, filesPrefix):
 def CreateIndices(conn, config):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}nodes_id ON {0}nodes (id, version);".format(config["dbtableprefix"]))
+	DbExec(cur, "ALTER TABLE {0}nodes ADD PRIMARY KEY (id, version);".format(config["dbtableprefix"]))
 	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}ways_id ON {0}ways (id, version);".format(config["dbtableprefix"]))
+	DbExec(cur, "ALTER TABLE {0}ways ADD PRIMARY KEY (id, version);".format(config["dbtableprefix"]))
 	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relations_id ON {0}relations (id, version);".format(config["dbtableprefix"]))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}nodes_gix ON {0}nodes USING GIST (geom);".format(config["dbtableprefix"]))
+	DbExec(cur, "ALTER TABLE {0}relations ADD PRIMARY KEY (id, version);".format(config["dbtableprefix"]))
 	conn.commit()
 
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}way_mems_mids ON {0}way_mems (member);".format(config["dbtableprefix"], filesPrefix))
+	DbExec(cur, "CREATE MATERIALIZED VIEW {0}livenodes AS SELECT * FROM {0}nodes WHERE current = true AND visible = true;".format(config["dbtableprefix"]))
 	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_gix ON {0}livenodes USING GIST (geom);".format(config["dbtableprefix"]))
+	conn.commit()
+	conn.set_session(autocommit=True)
+	DbExec(cur, "VACUUM ANALYZE {0}livenodes(geom);".format(config["dbtableprefix"]))
+	conn.set_session(autocommit=False)
+
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}way_mems_mids ON {0}way_mems (member);".format(config["dbtableprefix"]))
+	conn.commit()
+
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_n_mids ON {0}relation_mems_n (member);".format(config["dbtableprefix"], filesPrefix))
 	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_w_mids ON {0}relation_mems_w (member);".format(config["dbtableprefix"], filesPrefix))
 	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(config["dbtableprefix"], filesPrefix))
 	conn.commit()
+
+	#Is this helpful? Possibly for django?
+	#DbExec(cur, "ALTER TABLE {0}relation_mems_n ADD PRIMARY KEY (id, version, index);".format(config["dbtableprefix"]))
+	#conn.commit()
+	#DbExec(cur, "ALTER TABLE {0}relation_mems_w ADD PRIMARY KEY (id, version, index);".format(config["dbtableprefix"]))
+	#conn.commit()
+	#DbExec(cur, "ALTER TABLE {0}relation_mems_r ADD PRIMARY KEY (id, version, index);".format(config["dbtableprefix"]))
+	#conn.commit()
 
 def GetMaxIds(conn, config):
 

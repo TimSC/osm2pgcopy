@@ -97,8 +97,8 @@ class CsvStore(object):
 		self.wayHash.update(li)
 		self.wayFile.write(li)
 
-		for mem in refs:
-			self.wayMembersFile.write("{0},{1},{2}\n".format(objectId, version, mem))
+		for i, mem in enumerate(refs):
+			self.wayMembersFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, mem))
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible = metaData
@@ -129,13 +129,13 @@ class CsvStore(object):
 		self.relationHash.update(li)
 		self.relationFile.write(li)
 
-		for memTy, memId, memRole in refs:
+		for i, (memTy, memId, memRole) in enumerate(refs):
 			if memTy == "node":
-				self.relationMemNodesFile.write("{0},{1},{2}\n".format(objectId, version, memId))
+				self.relationMemNodesFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
 			elif memTy == "way":
-				self.relationMemWaysFile.write("{0},{1},{2}\n".format(objectId, version, memId))
+				self.relationMemWaysFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
 			elif memTy == "relation":
-				self.relationMemRelsFile.write("{0},{1},{2}\n".format(objectId, version, memId))
+				self.relationMemRelsFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
 
 if __name__=="__main__":
 
