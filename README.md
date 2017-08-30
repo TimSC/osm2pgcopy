@@ -88,12 +88,5 @@ copytodb has an interactive command line menu. Select the options presented in o
 database dump
 =============
 
-The current fastest method is to use the C++ dump program.
-
-	sudo apt install libpqxx-dev rapidjson-dev
-
-	make
-
-	./dump
-
+The current fastest method is to use the C++ dump program, which you can find here: https://github.com/TimSC/pgmap-query
 

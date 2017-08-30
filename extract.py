@@ -371,6 +371,7 @@ if __name__=="__main__":
 		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
 		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 		cur.execute(query, [shpStr])
+	print (cur.query)
 
 	for row in cur:
 		nid = row["id"]
@@ -381,6 +382,7 @@ if __name__=="__main__":
 
 	cur.close()
 	print "num nodes", len(knownNodeIds), "in", time.time() - startTime
+
 	queryNodes = knownNodeIds
 	queryWays = []
 	queryRelations = []
