@@ -10,6 +10,8 @@ def DropTables(cur, config):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}livenodes;".format(config["dbtableprefix"]))
+	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liveways;".format(config["dbtableprefix"]))
+	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liverelations;".format(config["dbtableprefix"]))
 
 	DbExec(cur, "DROP TABLE IF EXISTS {0}nodes;".format(config["dbtableprefix"]))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}ways;".format(config["dbtableprefix"]))
@@ -74,6 +76,18 @@ def CreateIndices(conn, config):
 	conn.set_session(autocommit=True)
 	DbExec(cur, "VACUUM ANALYZE {0}livenodes(geom);".format(config["dbtableprefix"]))
 	conn.set_session(autocommit=False)
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_ids ON {0}livenodes(id);".format(config["dbtableprefix"]))
+	conn.commit()
+
+	DbExec(cur, "CREATE MATERIALIZED VIEW {0}liveways AS SELECT * FROM {0}ways WHERE current = true AND visible = true;".format(config["dbtableprefix"]))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_ids ON {0}liveways(id);".format(config["dbtableprefix"]))
+	conn.commit()
+
+	DbExec(cur, "CREATE MATERIALIZED VIEW {0}liverelations AS SELECT * FROM {0}relations WHERE current = true AND visible = true;".format(config["dbtableprefix"]))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_ids ON {0}liverelations(id);".format(config["dbtableprefix"]))
+	conn.commit()
 
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}way_mems_mids ON {0}way_mems (member);".format(config["dbtableprefix"]))
 	conn.commit()
