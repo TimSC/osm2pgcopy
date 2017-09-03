@@ -71,7 +71,7 @@ Usually the fastest way to import a database into postgresql/postgis is to conve
 	
 	python osm2pgcopy.py greece-latest.osm.bz2 greece-
 
-And wait for a while. You can see the results and change permissions so it can be accessed by the postgres user:
+And wait for a while. You can see the results and change permissions so it can be accessed by the postgres user (possibly including allowing permissions for postgres to read all parent folders):
 
     ls -lh greece-*.csv.gz
 
@@ -83,7 +83,7 @@ Run the copytodb.py script using the postgres user on the machine running the da
 	
 	python copytodb.py /full/path/to/greece-
 
-copytodb has an interactive command line menu. Select the options presented in order. This creates the tables, copies the data and creates the indices. This can take a while for large areas, and over a day for a whole planet dump!
+copytodb has an interactive command line menu. Select the options presented in order. This creates the tables, copies the data and creates the indices. This can take a while for large areas, and over a day for a whole planet dump! If the process fails with child process error, this is probably due to permissions. 
 
 database dump
 =============
