@@ -1,11 +1,24 @@
 from pyo5m import o5m, osmxml
-import gzip, json, config, datetime, sys, time
+import gzip, json, datetime, sys, time
 import psycopg2, psycopg2.extras, psycopg2.extensions #apt install python-psycopg2
+import string
+
+def ReadConfig(fina):
+	fi = open(fina, "rt")
+	settings = {}
+	for li in fi.readlines():
+		lisp = map(string.strip, li.split(":"))
+		if len(lisp) < 2:
+			continue
+		settings[lisp[0]] = lisp[1]
+	return settings
+
+config = ReadConfig("config.cfg")
 
 def GetWaysForNodes(conn, qids, knownNodeIds, extraNodeIds, wayIdsToFind):
 	sqlFrags = []
-	wayTable = "{0}ways".format(config.dbtableprefix)
-	wayMemTable = "{0}way_mems".format(config.dbtableprefix)
+	wayTable = "{0}ways".format(config["dbtableprefix"])
+	wayMemTable = "{0}way_mems".format(config["dbtableprefix"])
 	for qid in qids:
 		sqlFrags.append("{0}.member = %s".format(wayMemTable))
 
@@ -30,7 +43,7 @@ def GetWaysForNodes(conn, qids, knownNodeIds, extraNodeIds, wayIdsToFind):
 	
 def GetChildNodesForWays(conn, wayIdsToFind, knownNodeIds, extraNodeIds):
 	sqlFrags = []
-	wayTable = "{0}ways".format(config.dbtableprefix)
+	wayTable = "{0}ways".format(config["dbtableprefix"])
 	for qid in wayIdsToFind:
 		sqlFrags.append("id = %s")
 
@@ -51,7 +64,7 @@ def GetNodesById(conn, qids, outEnc):
 	sqlFrags = []
 	for qid in qids:
 		sqlFrags.append("id = %s")
-	query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config.dbtableprefix) +
+	query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}nodes".format(config["dbtableprefix"]) +
 		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
 	cur = conn.cursor('node-by-id-cursor', cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
@@ -71,7 +84,7 @@ def GetWaysById(conn, qids, outEnc):
 	sqlFrags = []
 	for qid in qids:
 		sqlFrags.append("id = %s")
-	query = ("SELECT * FROM {0}ways".format(config.dbtableprefix) +
+	query = ("SELECT * FROM {0}ways".format(config["dbtableprefix"]) +
 		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
 	cur = conn.cursor('way-by-id-cursor', cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
@@ -93,7 +106,7 @@ def GetRelationsById(conn, qids, knownRelationIds, outEnc):
 		if qid in knownRelationIds:
 			continue
 		sqlFrags.append("id = %s")
-	query = ("SELECT * FROM {0}relations".format(config.dbtableprefix) +
+	query = ("SELECT * FROM {0}relations".format(config["dbtableprefix"]) +
 		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
 	cur = conn.cursor('relation-by-id-cursor', cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
@@ -116,7 +129,7 @@ def GetRelationsMembers(conn, qids, extraNodesOut, extraWaysOut, extraRelationsO
 	sqlFrags = []
 	for qid in qids:
 		sqlFrags.append("id = %s")
-	query = ("SELECT * FROM {0}relations".format(config.dbtableprefix) +
+	query = ("SELECT * FROM {0}relations".format(config["dbtableprefix"]) +
 		" WHERE ({0}) and visible=true and current=true;".format(" OR ".join(sqlFrags)))
 	cur = conn.cursor('relation-by-id-cursor', cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
@@ -141,8 +154,8 @@ def GetRelationsMembers(conn, qids, extraNodesOut, extraWaysOut, extraRelationsO
 def GetRelationsForObjects(conn, qtype, qids, knownRelationIds, relationIdsOut, encOut):
 	#print qids
 	sqlFrags = []
-	relTable = "{0}relations".format(config.dbtableprefix)
-	relMemTable = "{0}relation_mems_{1}".format(config.dbtableprefix, qtype)
+	relTable = "{0}relations".format(config["dbtableprefix"])
+	relMemTable = "{0}relation_mems_{1}".format(config["dbtableprefix"], qtype)
 	for qid in qids:
 		sqlFrags.append("{0}.member = %s".format(relMemTable))
 	sql = "SELECT {0}.* FROM {1} INNER JOIN {0} ON {1}.id = {0}.id AND {1}.version = {0}.version WHERE current = true and visible = true AND ({2});".format(relTable, relMemTable, " OR ".join(sqlFrags));
@@ -326,9 +339,8 @@ def CompleteQuery(conn, queryNodes, knownNodeIds, queryWays, queryRelations, enc
 
 
 if __name__=="__main__":
-	outFina = "extract.osm.gz"
 
-	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config.dbname, config.dbuser, config.dbhost, config.dbpass))
+	conn = psycopg2.connect("dbname='{0}' user='{1}' host='{2}' password='{3}'".format(config["dbname"], config["dbuser"], config["dbhost"], config["dbpass"]))
 	#left,bottom,right,top
 	bbox = None
 	#bbox = [20.8434677,39.6559274,20.8699036,39.6752201] #Town in greece
@@ -343,7 +355,7 @@ if __name__=="__main__":
 	#shpStr = ShpFileToLineString("shapes/ontario.shp")
 
 	if 1:
-		fi = gzip.open(outFina, "wb")
+		fi = gzip.open("extract.o5m.gz", "wb")
 		enc = o5m.O5mEncode(fi)
 	if 0:
 		fi = gzip.open("extract.osm.gz", "wb")
@@ -360,13 +372,13 @@ if __name__=="__main__":
 	startTime = time.time()
 
 	if bbox is not None:
-		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config.dbtableprefix) +
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config["dbtableprefix"]) +
 			" WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326);")
 		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
 		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 		cur.execute(query, bbox)
 	else:
-		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config.dbtableprefix) +
+		query = ("SELECT *, ST_X(geom) as lon, ST_Y(geom) AS lat FROM {0}livenodes".format(config["dbtableprefix"]) +
 			" WHERE ST_Contains(ST_GeomFromText(%s, 4326), geom);")
 		cur = conn.cursor('node-cursor', cursor_factory=psycopg2.extras.DictCursor)
 		psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
