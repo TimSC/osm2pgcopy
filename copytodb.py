@@ -176,7 +176,7 @@ if __name__=="__main__":
 		print ("4. Create indices")
 		print ("5. Get max object ids")
 		print ("6. Drop old modify tables in db")
-		print ("7. Create modify tables and indicies in db")
+		print ("7. Create modify/test tables and indicies in db")
 		print ("q. Quit")
 
 		userIn = raw_input()
@@ -193,9 +193,12 @@ if __name__=="__main__":
 			GetMaxIds(conn, config)
 		elif userIn == "6":
 			DropTables(conn, config, config["dbtablemodifyprefix"])
+			DropTables(conn, config, config["dbtabletestprefix"])
 		elif userIn == "7":
 			CreateTables(conn, config, config["dbtablemodifyprefix"])
 			CreateIndices(conn, config, config["dbtablemodifyprefix"])
+			CreateTables(conn, config, config["dbtabletestprefix"])
+			CreateIndices(conn, config, config["dbtabletestprefix"])
 		elif userIn == "q":
 			running = False
 
