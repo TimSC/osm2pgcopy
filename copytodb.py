@@ -40,6 +40,8 @@ def CreateTables(conn, config, p):
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_w (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_r (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nextids (id CHAR(16), maxid BIGINT, PRIMARY KEY(id));".format(p))
+
 	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
 	
 	conn.commit()
@@ -123,28 +125,54 @@ def CreateIndices(conn, config, p):
 	#DbExec(cur, "ALTER TABLE {0}relation_mems_r ADD PRIMARY KEY (id, version, index);".format(p))
 	#conn.commit()
 
-def GetMaxIds(conn, config, p):
+def GetMaxIds(conn, config, p, p2, p3):
 
-	query = "SELECT MAX(id) FROM {0}nodes".format(p)
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	sql = "DELETE FROM {0}nextids;".format(p)
+	cur.execute(sql)
+	sql = "DELETE FROM {0}nextids;".format(p2)
+	cur.execute(sql)
+	sql = "DELETE FROM {0}nextids;".format(p3)
+	cur.execute(sql)
+
+	maxid = None
+	query = "SELECT MAX(id) FROM {0}nodes".format(p)
 	cur.execute(query)
 	for row in cur:
 		print ("max node id:", row[0])
+		maxid = row[0]
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p2, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p3, maxid+1)
+	cur.execute(sql)
 
 	query = "SELECT MAX(id) FROM {0}ways".format(p)
-	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 	cur.execute(query)
 	for row in cur:
 		print ("max way id:", row[0])
+		maxid = row[0]
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p2, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p3, maxid+1)
+	cur.execute(sql)
 
 	query = "SELECT MAX(id) FROM {0}relations".format(p)
-	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 	cur.execute(query)
 	for row in cur:
 		print ("max relation id:", row[0])
+		maxid = row[0]
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p2, maxid+1)
+	cur.execute(sql)
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p3, maxid+1)
+	cur.execute(sql)
+	conn.commit()
 
 if __name__=="__main__":
 	
@@ -174,9 +202,9 @@ if __name__=="__main__":
 		print ("2. Create tables in db")
 		print ("3. Copy data from csv files to db")
 		print ("4. Create indices")
-		print ("5. Get max object ids")
-		print ("6. Drop old modify tables in db")
-		print ("7. Create modify/test tables and indicies in db")
+		print ("5. Drop old modify tables in db")
+		print ("6. Create modify/test tables and indicies in db")
+		print ("7. Get max object ids")
 		print ("q. Quit")
 
 		userIn = raw_input()
@@ -190,16 +218,15 @@ if __name__=="__main__":
 		elif userIn == "4":
 			CreateIndices(conn, config, config["dbtableprefix"])
 		elif userIn == "5":
-			GetMaxIds(conn, config)
-		elif userIn == "6":
 			DropTables(conn, config, config["dbtablemodifyprefix"])
 			DropTables(conn, config, config["dbtabletestprefix"])
-		elif userIn == "7":
+		elif userIn == "6":
 			CreateTables(conn, config, config["dbtablemodifyprefix"])
 			CreateIndices(conn, config, config["dbtablemodifyprefix"])
 			CreateTables(conn, config, config["dbtabletestprefix"])
 			CreateIndices(conn, config, config["dbtabletestprefix"])
+		elif userIn == "7":
+			GetMaxIds(conn, config, config["dbtableprefix"], config["dbtabletestprefix"], config["dbtablemodifyprefix"])
 		elif userIn == "q":
 			running = False
-
 
