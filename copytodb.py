@@ -40,7 +40,7 @@ def CreateTables(conn, config, p):
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_w (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_r (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nextids (id CHAR(16), maxid BIGINT, PRIMARY KEY(id));".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nextids (id VARCHAR(16), maxid BIGINT, PRIMARY KEY(id));".format(p))
 
 	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
 	
