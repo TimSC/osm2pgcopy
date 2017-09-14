@@ -9,6 +9,8 @@ def DbExec(cur, sql):
 def DropTables(cur, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
+	#Legacy
+
 	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}livenodes;".format(p))
 	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liveways;".format(p))
 	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liverelations;".format(p))
@@ -21,6 +23,16 @@ def DropTables(cur, config, p):
 	DbExec(cur, "DROP TABLE IF EXISTS {0}ways;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relations;".format(p))
 
+	#Current
+
+	DbExec(cur, "DROP TABLE IF EXISTS {0}oldnodes;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}oldways;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}oldrelations;".format(p))
+
+	DbExec(cur, "DROP TABLE IF EXISTS {0}livenodes;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}liveways;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}liverelations;".format(p))
+
 	DbExec(cur, "DROP TABLE IF EXISTS {0}way_mems;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_n;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_w;".format(p))
@@ -31,9 +43,13 @@ def DropTables(cur, config, p):
 def CreateTables(conn, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}ways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldnodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldrelations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);".format(p))
+
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}livenodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liveways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liverelations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB, memberroles JSONB);".format(p))
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}way_mems (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_n (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
@@ -49,11 +65,18 @@ def CreateTables(conn, config, p):
 def CopyToDb(conn, config, p, filesPrefix):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
-	DbExec(cur, "COPY {0}nodes FROM PROGRAM 'zcat {1}nodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	DbExec(cur, "COPY {0}oldnodes FROM PROGRAM 'zcat {1}oldnodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
-	DbExec(cur, "COPY {0}ways FROM PROGRAM 'zcat {1}ways.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	DbExec(cur, "COPY {0}oldways FROM PROGRAM 'zcat {1}oldways.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
-	DbExec(cur, "COPY {0}relations FROM PROGRAM 'zcat {1}relations.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	DbExec(cur, "COPY {0}oldrelations FROM PROGRAM 'zcat {1}oldrelations.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "COPY {0}livenodes FROM PROGRAM 'zcat {1}livenodes.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "COPY {0}liveways FROM PROGRAM 'zcat {1}liveways.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "COPY {0}liverelations FROM PROGRAM 'zcat {1}liverelations.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 
 	DbExec(cur, "COPY {0}way_mems FROM PROGRAM 'zcat {1}waymems.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
@@ -68,44 +91,25 @@ def CopyToDb(conn, config, p, filesPrefix):
 def CreateIndices(conn, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	DbExec(cur, "ALTER TABLE {0}nodes ADD PRIMARY KEY (id, version);".format(p))
+	DbExec(cur, "ALTER TABLE {0}oldnodes ADD PRIMARY KEY (id, version);".format(p))
 	conn.commit()
-	DbExec(cur, "ALTER TABLE {0}ways ADD PRIMARY KEY (id, version);".format(p))
+	DbExec(cur, "ALTER TABLE {0}oldways ADD PRIMARY KEY (id, version);".format(p))
 	conn.commit()
-	DbExec(cur, "ALTER TABLE {0}relations ADD PRIMARY KEY (id, version);".format(p))
+	DbExec(cur, "ALTER TABLE {0}oldrelations ADD PRIMARY KEY (id, version);".format(p))
 	conn.commit()
 
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}livenodes AS SELECT * FROM {0}nodes WHERE current = true AND visible = true;".format(p))
+	DbExec(cur, "ALTER TABLE {0}livenodes ADD PRIMARY KEY (id);".format(p))
 	conn.commit()
+	DbExec(cur, "ALTER TABLE {0}liveways ADD PRIMARY KEY (id);".format(p))
+	conn.commit()
+	DbExec(cur, "ALTER TABLE {0}liverelations ADD PRIMARY KEY (id);".format(p))
+	conn.commit()
+
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_gix ON {0}livenodes USING GIST (geom);".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}deletednodes AS SELECT * FROM {0}nodes WHERE current = true AND visible = false;".format(p))
 	conn.commit()
 	conn.set_session(autocommit=True)
 	DbExec(cur, "VACUUM ANALYZE {0}livenodes(geom);".format(p))
 	conn.set_session(autocommit=False)
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_ids ON {0}livenodes(id);".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}deletednodes_ids ON {0}deletednodes(id);".format(p))
-	conn.commit()
-
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}liveways AS SELECT * FROM {0}ways WHERE current = true AND visible = true;".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_ids ON {0}liveways(id);".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}deletedways AS SELECT * FROM {0}ways WHERE current = true AND visible = false;".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}deletedways_ids ON {0}deletedways(id);".format(p))
-	conn.commit()
-
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}liverelations AS SELECT * FROM {0}relations WHERE current = true AND visible = true;".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_ids ON {0}liverelations(id);".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE MATERIALIZED VIEW {0}deletedrelations AS SELECT * FROM {0}relations WHERE current = true AND visible = false;".format(p))
-	conn.commit()
-	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}deletedrelations_ids ON {0}deletedrelations(id);".format(p))
-	conn.commit()
 
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}way_mems_mids ON {0}way_mems (member);".format(p))
 	conn.commit()
@@ -116,14 +120,6 @@ def CreateIndices(conn, config, p):
 	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(p, filesPrefix))
 	conn.commit()
-
-	#Is this helpful? Possibly for django?
-	#DbExec(cur, "ALTER TABLE {0}relation_mems_n ADD PRIMARY KEY (id, version, index);".format(p))
-	#conn.commit()
-	#DbExec(cur, "ALTER TABLE {0}relation_mems_w ADD PRIMARY KEY (id, version, index);".format(p))
-	#conn.commit()
-	#DbExec(cur, "ALTER TABLE {0}relation_mems_r ADD PRIMARY KEY (id, version, index);".format(p))
-	#conn.commit()
 
 def GetMaxIds(conn, config, p, p2, p3):
 
@@ -137,7 +133,7 @@ def GetMaxIds(conn, config, p, p2, p3):
 	cur.execute(sql)
 
 	maxid = None
-	query = "SELECT MAX(id) FROM {0}nodes".format(p)
+	query = "SELECT MAX(id) FROM {0}livenodes".format(p)
 	cur.execute(query)
 	for row in cur:
 		print ("max node id:", row[0])
@@ -149,7 +145,7 @@ def GetMaxIds(conn, config, p, p2, p3):
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p3, maxid+1)
 	cur.execute(sql)
 
-	query = "SELECT MAX(id) FROM {0}ways".format(p)
+	query = "SELECT MAX(id) FROM {0}liveways".format(p)
 	cur.execute(query)
 	for row in cur:
 		print ("max way id:", row[0])
@@ -161,7 +157,7 @@ def GetMaxIds(conn, config, p, p2, p3):
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p3, maxid+1)
 	cur.execute(sql)
 
-	query = "SELECT MAX(id) FROM {0}relations".format(p)
+	query = "SELECT MAX(id) FROM {0}liverelations".format(p)
 	cur.execute(query)
 	for row in cur:
 		print ("max relation id:", row[0])

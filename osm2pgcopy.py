@@ -1,5 +1,5 @@
 from pyo5m import osmxml, o5m
-import gzip, json, sys, hashlib, os, bz2
+import gzip, json, sys, os, bz2
 
 #select * from pg_stat_activity;
 
@@ -25,29 +25,33 @@ import gzip, json, sys, hashlib, os, bz2
 class CsvStore(object):
 
 	def __init__(self, outPrefix):
-		self.nodeFile = gzip.GzipFile(outPrefix+"nodes.csv.gz", "wb")
-		self.wayFile = gzip.GzipFile(outPrefix+"ways.csv.gz", "wb")
+		self.livenodeFile = gzip.GzipFile(outPrefix+"livenodes.csv.gz", "wb")
+		self.oldnodeFile = gzip.GzipFile(outPrefix+"oldnodes.csv.gz", "wb")
+		self.livewayFile = gzip.GzipFile(outPrefix+"liveways.csv.gz", "wb")
+		self.oldwayFile = gzip.GzipFile(outPrefix+"oldways.csv.gz", "wb")
+		self.liverelationFile = gzip.GzipFile(outPrefix+"liverelations.csv.gz", "wb")
+		self.oldrelationFile = gzip.GzipFile(outPrefix+"oldrelations.csv.gz", "wb")
+
 		self.wayMembersFile = gzip.GzipFile(outPrefix+"waymems.csv.gz", "wb")
-		self.relationFile = gzip.GzipFile(outPrefix+"relations.csv.gz", "wb")
 		self.relationMemNodesFile = gzip.GzipFile(outPrefix+"relationmems-n.csv.gz", "wb")
 		self.relationMemWaysFile = gzip.GzipFile(outPrefix+"relationmems-w.csv.gz", "wb")
 		self.relationMemRelsFile = gzip.GzipFile(outPrefix+"relationmems-r.csv.gz", "wb")
 
-		self.nodeHash = hashlib.md5()
-		self.wayHash = hashlib.md5()
-		self.relationHash = hashlib.md5()
-
 	def Close(self):
-		self.nodeFile.close()
-		self.wayFile.close()
+		self.oldnodeFile.close()
+		self.livenodeFile.close()
+		self.oldwayFile.close()
+		self.livewayFile.close()
+		self.oldrelationFile.close()
+		self.liverelationFile.close()
+
 		self.wayMembersFile.close()
-		self.relationFile.close()
 		self.relationMemNodesFile.close()
 		self.relationMemWaysFile.close()
 		self.relationMemRelsFile.close()
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
-		version, timestamp, changeset, uid, username, visible = metaData
+		version, timestamp, changeset, uid, username, visible, current = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		tagDump = tagDump.replace('\u00b0', '')
@@ -64,15 +68,21 @@ class CsvStore(object):
 		else:
 			timestamp = "NULL"
 		if visible is None: visible = True
-		current = True
-		li = u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'. \
-			format(objectId, pos[1], pos[0], changeset, username, uid, visible, \
-			timestamp, version, current, tagDump).encode("UTF-8")
-		self.nodeHash.update(li)
-		self.nodeFile.write(li)
+		if current is None: current = True
+
+		if current and visible:
+			li = u'{0},{3},{4},{5},{6},{7},\"{8}\",SRID=4326;POINT({1} {2})\n'. \
+				format(objectId, pos[1], pos[0], changeset, username, uid, \
+				timestamp, version, tagDump).encode("UTF-8")
+			self.livenodeFile.write(li)
+		else:
+			li = u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'. \
+				format(objectId, pos[1], pos[0], changeset, username, uid, visible, \
+				timestamp, version, current, tagDump).encode("UTF-8")
+			self.oldnodeFile.write(li)
 
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
-		version, timestamp, changeset, uid, username, visible = metaData
+		version, timestamp, changeset, uid, username, visible, current = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		if username is not None:
@@ -90,18 +100,24 @@ class CsvStore(object):
 
 		memDump= json.dumps(refs)
 		if visible is None: visible = True
-		current = True
-		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
-			format(objectId, changeset, username, uid, visible, \
-			timestamp, version, current, tagDump, memDump).encode("UTF-8")
-		self.wayHash.update(li)
-		self.wayFile.write(li)
+		if current is None: current = True
+
+		if current and visible:
+			li = u'{0},{1},{2},{3},{4},{5},\"{6}\",\"{7}\"\n'. \
+				format(objectId, changeset, username, uid, \
+				timestamp, version, tagDump, memDump).encode("UTF-8")
+			self.livewayFile.write(li)
+		else:
+			li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
+				format(objectId, changeset, username, uid, visible, \
+				timestamp, version, current, tagDump, memDump).encode("UTF-8")
+			self.oldwayFile.write(li)
 
 		for i, mem in enumerate(refs):
 			self.wayMembersFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, mem))
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
-		version, timestamp, changeset, uid, username, visible = metaData
+		version, timestamp, changeset, uid, username, visible, current = metaData
 		tagDump = json.dumps(tags)
 		tagDump = tagDump.replace('"', '""')
 		if username is not None:
@@ -122,12 +138,18 @@ class CsvStore(object):
 		rolesDump= json.dumps([mem[2] for mem in refs])
 		rolesDump = rolesDump.replace('"', '""')
 		if visible is None: visible = True
-		current = True
-		li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\",\"{10}\"\n'. \
-			format(objectId, changeset, username, uid, visible, \
-			timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
-		self.relationHash.update(li)
-		self.relationFile.write(li)
+		if current is None: current = True
+
+		if current and visible:
+			li = u'{0},{1},{2},{3},{4},{5},\"{6}\",\"{7}\",\"{8}\"\n'. \
+				format(objectId, changeset, username, uid, \
+				timestamp, version, tagDump, memDump, rolesDump).encode("UTF-8")
+			self.liverelationFile.write(li)
+		else:
+			li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\",\"{10}\"\n'. \
+				format(objectId, changeset, username, uid, visible, \
+				timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
+			self.oldrelationFile.write(li)
 
 		for i, (memTy, memId, memRole) in enumerate(refs):
 			if memTy == "node":
@@ -172,10 +194,6 @@ if __name__=="__main__":
 		done = dec.DecodeNext()
 
 	csvStore.Close()
-
-	print "nodeHash", csvStore.nodeHash.hexdigest()
-	print "wayHash", csvStore.wayHash.hexdigest()
-	print "relationHash", csvStore.relationHash.hexdigest()
 
 	del csvStore
 	del dec
