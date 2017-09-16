@@ -26,11 +26,16 @@ class CsvStore(object):
 
 	def __init__(self, outPrefix):
 		self.livenodeFile = gzip.GzipFile(outPrefix+"livenodes.csv.gz", "wb")
-		self.oldnodeFile = gzip.GzipFile(outPrefix+"oldnodes.csv.gz", "wb")
 		self.livewayFile = gzip.GzipFile(outPrefix+"liveways.csv.gz", "wb")
-		self.oldwayFile = gzip.GzipFile(outPrefix+"oldways.csv.gz", "wb")
 		self.liverelationFile = gzip.GzipFile(outPrefix+"liverelations.csv.gz", "wb")
+
+		self.oldnodeFile = gzip.GzipFile(outPrefix+"oldnodes.csv.gz", "wb")
+		self.oldwayFile = gzip.GzipFile(outPrefix+"oldways.csv.gz", "wb")
 		self.oldrelationFile = gzip.GzipFile(outPrefix+"oldrelations.csv.gz", "wb")
+
+		self.nodeIdsFile = gzip.GzipFile(outPrefix+"nodeids.csv.gz", "wb")
+		self.wayIdsFile = gzip.GzipFile(outPrefix+"wayids.csv.gz", "wb")
+		self.relationIdsFile = gzip.GzipFile(outPrefix+"relationids.csv.gz", "wb")
 
 		self.wayMembersFile = gzip.GzipFile(outPrefix+"waymems.csv.gz", "wb")
 		self.relationMemNodesFile = gzip.GzipFile(outPrefix+"relationmems-n.csv.gz", "wb")
@@ -38,12 +43,17 @@ class CsvStore(object):
 		self.relationMemRelsFile = gzip.GzipFile(outPrefix+"relationmems-r.csv.gz", "wb")
 
 	def Close(self):
-		self.oldnodeFile.close()
 		self.livenodeFile.close()
-		self.oldwayFile.close()
 		self.livewayFile.close()
-		self.oldrelationFile.close()
 		self.liverelationFile.close()
+
+		self.oldnodeFile.close()
+		self.oldwayFile.close()
+		self.oldrelationFile.close()
+
+		self.nodeIdsFile.close()
+		self.wayIdsFile.close()
+		self.relationIdsFile.close()
 
 		self.wayMembersFile.close()
 		self.relationMemNodesFile.close()
@@ -81,6 +91,8 @@ class CsvStore(object):
 				timestamp, version, current, tagDump).encode("UTF-8")
 			self.oldnodeFile.write(li)
 
+		self.nodeIdsFile.write("{0}\n".format(objectId))
+
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible, current = metaData
 		tagDump = json.dumps(tags)
@@ -113,6 +125,7 @@ class CsvStore(object):
 				timestamp, version, current, tagDump, memDump).encode("UTF-8")
 			self.oldwayFile.write(li)
 
+		self.wayIdsFile.write("{0}\n".format(objectId))
 		for i, mem in enumerate(refs):
 			self.wayMembersFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, mem))
 
@@ -151,6 +164,7 @@ class CsvStore(object):
 				timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
 			self.oldrelationFile.write(li)
 
+		self.relationIdsFile.write("{0}\n".format(objectId))
 		for i, (memTy, memId, memRole) in enumerate(refs):
 			if memTy == "node":
 				self.relationMemNodesFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))

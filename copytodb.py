@@ -9,20 +9,6 @@ def DbExec(cur, sql):
 def DropTables(cur, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	#Legacy
-
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}livenodes;".format(p))
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liveways;".format(p))
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}liverelations;".format(p))
-
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}deletednodes;".format(p))
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}deletedways;".format(p))
-	DbExec(cur, "DROP MATERIALIZED VIEW IF EXISTS {0}deletedrelations;".format(p))
-
-	DbExec(cur, "DROP TABLE IF EXISTS {0}nodes;".format(p))
-	DbExec(cur, "DROP TABLE IF EXISTS {0}ways;".format(p))
-	DbExec(cur, "DROP TABLE IF EXISTS {0}relations;".format(p))
-
 	#Current
 
 	DbExec(cur, "DROP TABLE IF EXISTS {0}oldnodes;".format(p))
@@ -32,6 +18,10 @@ def DropTables(cur, config, p):
 	DbExec(cur, "DROP TABLE IF EXISTS {0}livenodes;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}liveways;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}liverelations;".format(p))
+
+	DbExec(cur, "DROP TABLE IF EXISTS {0}nodeids;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}wayids;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}relationids;".format(p))
 
 	DbExec(cur, "DROP TABLE IF EXISTS {0}way_mems;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_n;".format(p))
@@ -50,6 +40,10 @@ def CreateTables(conn, config, p):
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}livenodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liveways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liverelations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB, memberroles JSONB);".format(p))
+
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nodeids (id BIGINT);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}wayids (id BIGINT);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relationids (id BIGINT);".format(p))
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}way_mems (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}relation_mems_n (id BIGINT, version INTEGER, index INTEGER, member BIGINT);".format(p))
@@ -79,6 +73,13 @@ def CopyToDb(conn, config, p, filesPrefix):
 	DbExec(cur, "COPY {0}liverelations FROM PROGRAM 'zcat {1}liverelations.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 
+	DbExec(cur, "COPY {0}nodeids FROM PROGRAM 'zcat {1}nodeids.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "COPY {0}wayids FROM PROGRAM 'zcat {1}wayids.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "COPY {0}relationids FROM PROGRAM 'zcat {1}relationids.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+
 	DbExec(cur, "COPY {0}way_mems FROM PROGRAM 'zcat {1}waymems.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 	DbExec(cur, "COPY {0}relation_mems_n FROM PROGRAM 'zcat {1}relationmems-n.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
@@ -103,6 +104,13 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "ALTER TABLE {0}liveways ADD PRIMARY KEY (id);".format(p))
 	conn.commit()
 	DbExec(cur, "ALTER TABLE {0}liverelations ADD PRIMARY KEY (id);".format(p))
+	conn.commit()
+
+	DbExec(cur, "ALTER TABLE {0}nodeids ADD PRIMARY KEY (id);".format(p))
+	conn.commit()
+	DbExec(cur, "ALTER TABLE {0}wayids ADD PRIMARY KEY (id);".format(p))
+	conn.commit()
+	DbExec(cur, "ALTER TABLE {0}relationids ADD PRIMARY KEY (id);".format(p))
 	conn.commit()
 
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_gix ON {0}livenodes USING GIST (geom);".format(p))
