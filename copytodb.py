@@ -129,6 +129,15 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(p, filesPrefix))
 	conn.commit()
 
+def GetMaxIdForTable(cur, p, objType):
+	maxid = None
+	query = "SELECT MAX(id) FROM {}live{}".format(p, objType)
+	cur.execute(query)
+	for row in cur:
+		print ("max node id:", row[0])
+		maxid = row[0]
+	return maxid
+
 def GetMaxIds(conn, config, p, p2, p3):
 
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -140,41 +149,40 @@ def GetMaxIds(conn, config, p, p2, p3):
 	sql = "DELETE FROM {0}nextids;".format(p3)
 	cur.execute(sql)
 
-	maxid = None
-	query = "SELECT MAX(id) FROM {0}livenodes".format(p)
-	cur.execute(query)
-	for row in cur:
-		print ("max node id:", row[0])
-		maxid = row[0]
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p, maxid+1)
+	staticMaxId = GetMaxIdForTable(cur, p, "nodes")
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p, staticMaxId+1)
 	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p2, maxid+1)
+	maxId = GetMaxIdForTable(cur, p2, "nodes")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p2, maxId+1)
 	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p3, maxid+1)
-	cur.execute(sql)
-
-	query = "SELECT MAX(id) FROM {0}liveways".format(p)
-	cur.execute(query)
-	for row in cur:
-		print ("max way id:", row[0])
-		maxid = row[0]
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p, maxid+1)
-	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p2, maxid+1)
-	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p3, maxid+1)
+	maxId = GetMaxIdForTable(cur, p3, "nodes")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p3, maxId+1)
 	cur.execute(sql)
 
-	query = "SELECT MAX(id) FROM {0}liverelations".format(p)
-	cur.execute(query)
-	for row in cur:
-		print ("max relation id:", row[0])
-		maxid = row[0]
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p, maxid+1)
+	staticMaxId = GetMaxIdForTable(cur, p, "ways")
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p, staticMaxId+1)
 	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p2, maxid+1)
+	maxId = GetMaxIdForTable(cur, p2, "ways")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p2, maxId+1)
 	cur.execute(sql)
-	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p3, maxid+1)
+	maxId = GetMaxIdForTable(cur, p3, "ways")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p3, maxId+1)
+	cur.execute(sql)
+
+	staticMaxId = GetMaxIdForTable(cur, p, "relations")
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p, staticMaxId+1)
+	cur.execute(sql)
+	maxId = GetMaxIdForTable(cur, p2, "relations")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p2, maxId+1)
+	cur.execute(sql)
+	maxId = GetMaxIdForTable(cur, p3, "relations")
+	if staticMaxId > maxId: maxId = staticMaxId
+	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p3, maxId+1)
 	cur.execute(sql)
 	conn.commit()
 
