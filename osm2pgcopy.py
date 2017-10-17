@@ -79,16 +79,17 @@ class CsvStore(object):
 			timestamp = "NULL"
 		if visible is None: visible = True
 		if current is None: current = True
-
+		changesetIndex = "NULL"
+		
 		if current and visible:
-			li = u'{0},{3},{4},{5},{6},{7},\"{8}\",SRID=4326;POINT({1} {2})\n'. \
-				format(objectId, pos[1], pos[0], changeset, username, uid, \
+			li = u'{0},{3},{4},{5},{6},{7},{8},\"{9}\",SRID=4326;POINT({1} {2})\n'. \
+				format(objectId, pos[1], pos[0], changeset, changesetIndex, username, uid, \
 				timestamp, version, tagDump).encode("UTF-8")
 			self.livenodeFile.write(li)
 		else:
 			li = u'{0},{3},{4},{5},{6},{7},{8},{9},\"{10}\",SRID=4326;POINT({1} {2})\n'. \
-				format(objectId, pos[1], pos[0], changeset, username, uid, visible, \
-				timestamp, version, current, tagDump).encode("UTF-8")
+				format(objectId, pos[1], pos[0], changeset, changesetIndex, username, uid, visible, \
+				timestamp, version, tagDump).encode("UTF-8")
 			self.oldnodeFile.write(li)
 
 		self.nodeIdsFile.write("{0}\n".format(objectId))
@@ -113,16 +114,17 @@ class CsvStore(object):
 		memDump= json.dumps(refs)
 		if visible is None: visible = True
 		if current is None: current = True
+		changesetIndex = "NULL"
 
 		if current and visible:
-			li = u'{0},{1},{2},{3},{4},{5},\"{6}\",\"{7}\"\n'. \
-				format(objectId, changeset, username, uid, \
+			li = u'{0},{1},{2},{3},{4},{5},{6},\"{7}\",\"{8}\"\n'. \
+				format(objectId, changeset, changesetIndex, username, uid, \
 				timestamp, version, tagDump, memDump).encode("UTF-8")
 			self.livewayFile.write(li)
 		else:
 			li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\"\n'. \
-				format(objectId, changeset, username, uid, visible, \
-				timestamp, version, current, tagDump, memDump).encode("UTF-8")
+				format(objectId, changeset, changesetIndex, username, uid, visible, \
+				timestamp, version, tagDump, memDump).encode("UTF-8")
 			self.oldwayFile.write(li)
 
 		self.wayIdsFile.write("{0}\n".format(objectId))
@@ -152,16 +154,17 @@ class CsvStore(object):
 		rolesDump = rolesDump.replace('"', '""')
 		if visible is None: visible = True
 		if current is None: current = True
+		changesetIndex = "NULL"
 
 		if current and visible:
-			li = u'{0},{1},{2},{3},{4},{5},\"{6}\",\"{7}\",\"{8}\"\n'. \
-				format(objectId, changeset, username, uid, \
+			li = u'{0},{1},{2},{3},{4},{5},{6},\"{7}\",\"{8}\",\"{9}\"\n'. \
+				format(objectId, changeset, changesetIndex, username, uid, \
 				timestamp, version, tagDump, memDump, rolesDump).encode("UTF-8")
 			self.liverelationFile.write(li)
 		else:
 			li = u'{0},{1},{2},{3},{4},{5},{6},{7},\"{8}\",\"{9}\",\"{10}\"\n'. \
-				format(objectId, changeset, username, uid, visible, \
-				timestamp, version, current, tagDump, memDump, rolesDump).encode("UTF-8")
+				format(objectId, changeset, changesetIndex, username, uid, visible, \
+				timestamp, version, tagDump, memDump, rolesDump).encode("UTF-8")
 			self.oldrelationFile.write(li)
 
 		self.relationIdsFile.write("{0}\n".format(objectId))

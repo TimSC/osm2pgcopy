@@ -9,8 +9,6 @@ def DbExec(cur, sql):
 def DropTables(cur, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	#Current
-
 	DbExec(cur, "DROP TABLE IF EXISTS {0}oldnodes;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}oldways;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}oldrelations;".format(p))
@@ -33,13 +31,13 @@ def DropTables(cur, config, p):
 def CreateTables(conn, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldnodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB);".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldrelations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, current BOOLEAN, tags JSONB, members JSONB, memberroles JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldnodes (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldways (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}oldrelations (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, visible BOOLEAN, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB, memberroles JSONB);".format(p))
 
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}livenodes (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liveways (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB);".format(p))
-	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liverelations (id BIGINT, changeset BIGINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB, memberroles JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}livenodes (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, geom GEOMETRY(Point, 4326));".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liveways (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB);".format(p))
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}liverelations (id BIGINT, changeset BIGINT, changeset_index SMALLINT, username TEXT, uid INTEGER, timestamp BIGINT, version INTEGER, tags JSONB, members JSONB, memberroles JSONB);".format(p))
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nodeids (id BIGINT);".format(p))
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}wayids (id BIGINT);".format(p))
@@ -52,8 +50,12 @@ def CreateTables(conn, config, p):
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}nextids (id VARCHAR(16), maxid BIGINT, PRIMARY KEY(id));".format(p))
 
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}meta (key TEXT, value TEXT);".format(p))
+	DbExec(cur, "DELETE FROM {0}meta WHERE key = 'schema_version';".format(p))
+	DbExec(cur, "INSERT INTO {0}meta (key, value) VALUES ('schema_version', '10');".format(p))
+
 	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
-	
+
 	conn.commit()
 
 def CopyToDb(conn, config, p, filesPrefix):
@@ -127,6 +129,43 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_w_mids ON {0}relation_mems_w (member);".format(p, filesPrefix))
 	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}relation_mems_r_mids ON {0}relation_mems_r (member);".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_ts ON {0}livenodes (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_ts ON {0}liveways (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_ts ON {0}liverelations (timestamp);".format(p, filesPrefix))
+	conn.commit()
+
+	#Timestamp indicies
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldnodes_ts ON {0}livenodes (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldways_ts ON {0}liveways (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldrelations_ts ON {0}liverelations (timestamp);".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_ts ON {0}livenodes (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_ts ON {0}liveways (timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_ts ON {0}liverelations (timestamp);".format(p, filesPrefix))
+	conn.commit()
+
+	#Changeset indices
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldnodes_cs ON {0}livenodes (changeset);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldways_cs ON {0}liveways (changeset);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldrelations_cs ON {0}liverelations (changeset);".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_cs ON {0}livenodes (changeset);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_cs ON {0}liveways (changeset);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_cs ON {0}liverelations (changeset);".format(p, filesPrefix))
 	conn.commit()
 
 def GetMaxIdForTable(cur, p, objType):
