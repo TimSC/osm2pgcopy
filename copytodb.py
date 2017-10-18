@@ -26,6 +26,10 @@ def DropTables(cur, config, p):
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_w;".format(p))
 	DbExec(cur, "DROP TABLE IF EXISTS {0}relation_mems_r;".format(p))
 
+	DbExec(cur, "DROP TABLE IF EXISTS {0}nextids;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}meta;".format(p))
+	DbExec(cur, "DROP TABLE IF EXISTS {0}changesets;".format(p))
+
 	conn.commit()
 
 def CreateTables(conn, config, p):
@@ -53,6 +57,8 @@ def CreateTables(conn, config, p):
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}meta (key TEXT, value TEXT);".format(p))
 	DbExec(cur, "DELETE FROM {0}meta WHERE key = 'schema_version';".format(p))
 	DbExec(cur, "INSERT INTO {0}meta (key, value) VALUES ('schema_version', '10');".format(p))
+
+	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}changesets (id BIGINT, username TEXT, uid INTEGER, tags JSONB, open_timestamp BIGINT, close_timestamp BIGINT, is_open BOOLEAN, geom GEOMETRY(Polygon, 4326), PRIMARY KEY(id));".format(p))
 
 	DbExec(cur, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {0};".format(config["dbuser"]))
 
@@ -168,6 +174,20 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_cs ON {0}liverelations (changeset);".format(p, filesPrefix))
 	conn.commit()
 
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}changesets_uidx ON {0}changesets (uid);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}changesets_open_timestampx ON {0}changesets (open_timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}changesets_close_timestampx ON {0}changesets (close_timestamp);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}changesets_is_openx ON {0}changesets (is_open);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}changesets_gix ON {0}changesets USING GIST (geom);".format(p))
+	conn.commit()
+	conn.set_session(autocommit=True)
+	DbExec(cur, "VACUUM ANALYZE {0}changesets(geom);".format(p))
+	conn.set_session(autocommit=False)
+	
 def GetMaxIdForTable(cur, p, objType):
 	maxid = None
 	query = "SELECT MAX(id) FROM {}live{}".format(p, objType)
@@ -225,14 +245,19 @@ def GetMaxIds(conn, config, p, p2, p3):
 	cur.execute(sql)
 	conn.commit()
 
-if __name__=="__main__":
-	
-	configFi = open("config.cfg", "rt")
+def ReadConfig(fina):
+
+	configFi = open(fina, "rt")
 	config = {}
 	for li in configFi.readlines():
 		liSplit = li.strip().split(":", 1)
 		if len(liSplit) < 2: continue
 		config[liSplit[0]] = liSplit[1]
+	return config	
+
+if __name__=="__main__":
+
+	config = ReadConfig("config.cfg")
 
 	if len(sys.argv) < 2:
 		print ("Specify file prefix as first argument, such as planet-")
