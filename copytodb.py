@@ -203,9 +203,9 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "VACUUM ANALYZE {0}changesets(geom);".format(p))
 	conn.set_session(autocommit=False)
 	
-def GetMaxIdForTable(cur, p, objType, field="id"):
+def GetMaxIdForTable(cur, p, objType, newOrOld, field="id"):
 	maxid = None
-	query = "SELECT MAX({}) FROM {}live{}".format(field, p, objType)
+	query = "SELECT MAX({}) FROM {}{}{}".format(field, p, newOrOld, objType)
 	cur.execute(query)
 	for row in cur:
 		print ("max {} {}:".format(objType, field), row[0])
@@ -217,7 +217,7 @@ def GetMaxIdForChangesetTable(cur, p, field="id"):
 	query = "SELECT MAX({}) FROM {}changesets".format(field, p)
 	cur.execute(query)
 	for row in cur:
-		print ("max {} {}:".format(objType, field), row[0])
+		print ("max {}:".format(field), row[0])
 		maxid = row[0]
 	return maxid
 
@@ -237,6 +237,11 @@ def GetMaxIds(cur, config, p):
 		out[row["id"]] = row["maxid"]
 	return out
 
+def GetMaxObjIdNewOrOld(cur, p, objType, field="id"):
+	maxId1 = GetMaxIdForTable(cur, p, objType, "live",field)
+	maxId2 = GetMaxIdForTable(cur, p, objType, "old", field)
+	return max(maxId1, maxId2)
+
 def RefreshMaxIds(conn, config, p, p2, p3):
 
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -247,38 +252,38 @@ def RefreshMaxIds(conn, config, p, p2, p3):
 	ClearObjectMaxIds(cur, config, p2)
 	ClearObjectMaxIds(cur, config, p3)
 
-	staticMaxId = GetMaxIdForTable(cur, p, "nodes")
+	staticMaxId = GetMaxObjIdNewOrOld(cur, p, "nodes")
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p, staticMaxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p2, "nodes")
+	maxId = GetMaxObjIdNewOrOld(cur, p2, "nodes")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p2, maxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p3, "nodes")
+	maxId = GetMaxObjIdNewOrOld(cur, p3, "nodes")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p3, maxId+1)
 	cur.execute(sql)
 
-	staticMaxId = GetMaxIdForTable(cur, p, "ways")
+	staticMaxId = GetMaxObjIdNewOrOld(cur, p, "ways")
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p, staticMaxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p2, "ways")
+	maxId = GetMaxObjIdNewOrOld(cur, p2, "ways")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p2, maxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p3, "ways")
+	maxId = GetMaxObjIdNewOrOld(cur, p3, "ways")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('way', {1});".format(p3, maxId+1)
 	cur.execute(sql)
 
-	staticMaxId = GetMaxIdForTable(cur, p, "relations")
+	staticMaxId = GetMaxObjIdNewOrOld(cur, p, "relations")
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p, staticMaxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p2, "relations")
+	maxId = GetMaxObjIdNewOrOld(cur, p2, "relations")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p2, maxId+1)
 	cur.execute(sql)
-	maxId = GetMaxIdForTable(cur, p3, "relations")
+	maxId = GetMaxObjIdNewOrOld(cur, p3, "relations")
 	if staticMaxId > maxId: maxId = staticMaxId
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('relation', {1});".format(p3, maxId+1)
 	cur.execute(sql)
@@ -294,10 +299,11 @@ def ResetChangesetUidCounts(conn, config, parent, pactive):
 	parentMaxId = 0
 	if parent is not None:
 		parentMaxId = GetMaxIds(cur, config, parent)["changeset"]
-	testCsMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "changeset")
-	testCsMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "changeset")
-	testCsMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "changeset")
-	maxChangeset = max(0, parentMaxId, testCsMaxIdNode, testCsMaxIdWay, testCsMaxIdRelation)
+	testCsMaxIdNode = GetMaxObjIdNewOrOld(cur, pactive, "nodes", "changeset")
+	testCsMaxIdWay = GetMaxObjIdNewOrOld(cur, pactive, "ways", "changeset")
+	testCsMaxIdRelation = GetMaxObjIdNewOrOld(cur, pactive, "relations", "changeset")
+	testCsMaxIdCs = GetMaxIdForChangesetTable(cur, pactive, "id")
+	maxChangeset = max(0, parentMaxId, testCsMaxIdNode, testCsMaxIdWay, testCsMaxIdRelation, testCsMaxIdCs)
 
 	sql = "DELETE FROM {0}nextids WHERE id = 'changeset';".format(pactive)
 	cur.execute(sql)
@@ -306,10 +312,11 @@ def ResetChangesetUidCounts(conn, config, parent, pactive):
 	#Uid
 	if parent is not None:
 		parentMaxId = GetMaxIds(cur, config, parent)["uid"]
-	testUidMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "uid")
-	testUidMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "uid")
-	testUidMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "uid")
-	maxUid = max(0, parentMaxId, testUidMaxIdNode, testUidMaxIdWay, testUidMaxIdRelation)
+	testUidMaxIdNode = GetMaxObjIdNewOrOld(cur, pactive, "nodes", "uid")
+	testUidMaxIdWay = GetMaxObjIdNewOrOld(cur, pactive, "ways", "uid")
+	testUidMaxIdRelation = GetMaxObjIdNewOrOld(cur, pactive, "relations", "uid")
+	testUidMaxIdCs = GetMaxIdForChangesetTable(cur, pactive, "uid")
+	maxUid = max(0, parentMaxId, testUidMaxIdNode, testUidMaxIdWay, testUidMaxIdRelation, testUidMaxIdCs)
 
 	sql = "DELETE FROM {0}nextids WHERE id = 'uid';".format(pactive)
 	cur.execute(sql)

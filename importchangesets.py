@@ -22,8 +22,6 @@ if __name__=="__main__":
 	cur.execute(sql)
 
 	maxIds = copytodb.GetMaxIds(cur, config, prefix)
-	maxUid = maxIds["uid"]-1
-	maxChangeset = maxIds["changeset"]-1
 
 	for fi in os.listdir("changesets"):
 		print fi
@@ -84,21 +82,8 @@ if __name__=="__main__":
 			sql += ");"
 			cur.execute(sql, (user, json.dumps(tags), is_open))
 
-			if uid != "NULL" and uid > maxUid:
-				maxUid = uid
-			if objId > maxChangeset:
-				maxChangeset = objId
-
-	sql = "DELETE FROM {0}nextids WHERE id = 'changeset';".format(prefix)
-	cur.execute(sql)
-	copytodb.DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('changeset', {1});".format(prefix, maxChangeset+1))
-
-	sql = "DELETE FROM {0}nextids WHERE id = 'uid';".format(prefix)
-	cur.execute(sql)
-	copytodb.DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('uid', {1});".format(prefix, maxUid+1))
-
 	conn.commit()
-
+	copytodb.ResetChangesetUidCounts(conn, config, None, config["dbtableprefix"])
 	copytodb.ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtabletestprefix"])
 	copytodb.ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtablemodifyprefix"])
 
