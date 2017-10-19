@@ -42,6 +42,10 @@ class CsvStore(object):
 		self.relationMemWaysFile = gzip.GzipFile(outPrefix+"relationmems-w.csv.gz", "wb")
 		self.relationMemRelsFile = gzip.GzipFile(outPrefix+"relationmems-r.csv.gz", "wb")
 
+		self.nextIdsFile = gzip.GzipFile(outPrefix+"nextids.csv.gz", "wb")
+		self.maxUid = 0
+		self.maxChangeset = 0
+
 	def Close(self):
 		self.livenodeFile.close()
 		self.livewayFile.close()
@@ -59,6 +63,13 @@ class CsvStore(object):
 		self.relationMemNodesFile.close()
 		self.relationMemWaysFile.close()
 		self.relationMemRelsFile.close()
+
+		li = u'{0},{1}\n'.format("uid", self.maxUid+1).encode("UTF-8")
+		self.nextIdsFile.write(li)
+		li = u'{0},{1}\n'.format("changeset", self.maxChangeset+1).encode("UTF-8")
+		self.nextIdsFile.write(li)
+
+		self.nextIdsFile.close()
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
 		version, timestamp, changeset, uid, username, visible, current = metaData

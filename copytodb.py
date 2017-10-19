@@ -56,7 +56,7 @@ def CreateTables(conn, config, p):
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}meta (key TEXT, value TEXT);".format(p))
 	DbExec(cur, "DELETE FROM {0}meta WHERE key = 'schema_version';".format(p))
-	DbExec(cur, "INSERT INTO {0}meta (key, value) VALUES ('schema_version', '10');".format(p))
+	DbExec(cur, "INSERT INTO {0}meta (key, value) VALUES ('schema_version', '11');".format(p))
 
 	DbExec(cur, "CREATE TABLE IF NOT EXISTS {0}changesets (id BIGINT, username TEXT, uid INTEGER, tags JSONB, open_timestamp BIGINT, close_timestamp BIGINT, is_open BOOLEAN, geom GEOMETRY(Polygon, 4326), PRIMARY KEY(id));".format(p))
 
@@ -95,6 +95,9 @@ def CopyToDb(conn, config, p, filesPrefix):
 	DbExec(cur, "COPY {0}relation_mems_w FROM PROGRAM 'zcat {1}relationmems-w.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 	DbExec(cur, "COPY {0}relation_mems_r FROM PROGRAM 'zcat {1}relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "COPY {0}nextids FROM PROGRAM 'zcat {1}nextids.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 
 def CreateIndices(conn, config, p):
