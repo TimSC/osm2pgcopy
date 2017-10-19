@@ -105,6 +105,11 @@ class CsvStore(object):
 
 		self.nodeIdsFile.write("{0}\n".format(objectId))
 
+		if uid != "NULL" and uid > self.maxUid:
+			self.maxUid = uid
+		if changeset != "NULL" and changeset > self.maxChangeset:
+			self.maxChangeset = changeset
+
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible, current = metaData
 		tagDump = json.dumps(tags)
@@ -141,6 +146,11 @@ class CsvStore(object):
 		self.wayIdsFile.write("{0}\n".format(objectId))
 		for i, mem in enumerate(refs):
 			self.wayMembersFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, mem))
+
+		if uid != "NULL" and uid > self.maxUid:
+			self.maxUid = uid
+		if changeset != "NULL" and changeset > self.maxChangeset:
+			self.maxChangeset = changeset
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible, current = metaData
@@ -186,6 +196,11 @@ class CsvStore(object):
 				self.relationMemWaysFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
 			elif memTy == "relation":
 				self.relationMemRelsFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
+
+		if uid != "NULL" and uid > self.maxUid:
+			self.maxUid = uid
+		if changeset != "NULL" and changeset > self.maxChangeset:
+			self.maxChangeset = changeset
 
 if __name__=="__main__":
 
