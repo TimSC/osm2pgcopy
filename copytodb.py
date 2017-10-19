@@ -191,25 +191,49 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "VACUUM ANALYZE {0}changesets(geom);".format(p))
 	conn.set_session(autocommit=False)
 	
-def GetMaxIdForTable(cur, p, objType):
+def GetMaxIdForTable(cur, p, objType, field="id"):
 	maxid = None
-	query = "SELECT MAX(id) FROM {}live{}".format(p, objType)
+	query = "SELECT MAX({}) FROM {}live{}".format(field, p, objType)
 	cur.execute(query)
 	for row in cur:
-		print ("max node id:", row[0])
+		print ("max {} {}:".format(objType, field), row[0])
 		maxid = row[0]
 	return maxid
 
-def GetMaxIds(conn, config, p, p2, p3):
+def GetMaxIdForChangesetTable(cur, p, field="id"):
+	maxid = None
+	query = "SELECT MAX({}) FROM {}changesets".format(field, p)
+	cur.execute(query)
+	for row in cur:
+		print ("max {} {}:".format(objType, field), row[0])
+		maxid = row[0]
+	return maxid
+
+def ClearObjectMaxIds(cur, config, p):
+	sql = "DELETE FROM {0}nextids WHERE id = 'node';".format(p)
+	cur.execute(sql)
+	sql = "DELETE FROM {0}nextids WHERE id = 'way';".format(p)
+	cur.execute(sql)
+	sql = "DELETE FROM {0}nextids WHERE id = 'relation';".format(p)
+	cur.execute(sql)
+
+def GetMaxIds(cur, config, p):
+	out = {}
+	query = "SELECT id, maxid FROM {}nextids".format(p)
+	cur.execute(query)
+	for row in cur:
+		out[row["id"]] = row["maxid"]
+	return out
+
+def RefreshMaxIds(conn, config, p, p2, p3):
 
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
-	sql = "DELETE FROM {0}nextids;".format(p)
-	cur.execute(sql)
-	sql = "DELETE FROM {0}nextids;".format(p2)
-	cur.execute(sql)
-	sql = "DELETE FROM {0}nextids;".format(p3)
-	cur.execute(sql)
+	#Lock the tables?
+
+	ClearObjectMaxIds(cur, config, p)
+	ClearObjectMaxIds(cur, config, p2)
+	ClearObjectMaxIds(cur, config, p3)
 
 	staticMaxId = GetMaxIdForTable(cur, p, "nodes")
 	sql = "INSERT INTO {0}nextids(id, maxid) VALUES ('node', {1});".format(p, staticMaxId+1)
@@ -248,6 +272,34 @@ def GetMaxIds(conn, config, p, p2, p3):
 	cur.execute(sql)
 	conn.commit()
 
+def ResetChangesetUidCounts(conn, config, prefix, pactive):
+
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
+	#Lock the tables?
+
+	#Changeset
+	maxIds = GetMaxIds(cur, config, prefix)["changeset"]
+	testCsMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "changeset")
+	testCsMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "changeset")
+	testCsMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "changeset")
+	maxChangeset = max(0, maxIds, testCsMaxIdNode, testCsMaxIdWay, testCsMaxIdRelation)
+
+	sql = "DELETE FROM {0}nextids WHERE id = 'changeset';".format(pactive)
+	cur.execute(sql)
+	DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('changeset', {1});".format(pactive, maxChangeset+1))
+
+	#Uid
+	maxIds = GetMaxIds(cur, config, prefix)["uid"]
+	testUidMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "uid")
+	testUidMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "uid")
+	testUidMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "uid")
+	maxUid = max(0, maxIds, testUidMaxIdNode, testUidMaxIdWay, testUidMaxIdRelation)
+
+	sql = "DELETE FROM {0}nextids WHERE id = 'uid';".format(pactive)
+	cur.execute(sql)
+	DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('uid', {1});".format(pactive, maxUid+1))
+
 def ReadConfig(fina):
 
 	configFi = open(fina, "rt")
@@ -283,7 +335,7 @@ if __name__=="__main__":
 		print ("4. Create indices")
 		print ("5. Drop old modify tables in db")
 		print ("6. Create modify/test tables and indicies in db")
-		print ("7. Get max object ids")
+		print ("7. Get max object ids, reset changeset/uid count")
 		print ("q. Quit")
 
 		userIn = raw_input()
@@ -305,7 +357,9 @@ if __name__=="__main__":
 			CreateTables(conn, config, config["dbtabletestprefix"])
 			CreateIndices(conn, config, config["dbtabletestprefix"])
 		elif userIn == "7":
-			GetMaxIds(conn, config, config["dbtableprefix"], config["dbtabletestprefix"], config["dbtablemodifyprefix"])
+			RefreshMaxIds(conn, config, config["dbtableprefix"], config["dbtabletestprefix"], config["dbtablemodifyprefix"])
+			ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtabletestprefix"])
+			ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtablemodifyprefix"])
 		elif userIn == "q":
 			running = False
 

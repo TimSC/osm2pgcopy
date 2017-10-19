@@ -14,11 +14,16 @@ if __name__=="__main__":
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 
-	print ("Connected to", config["dbname"]+", table prefix", config["dbtableprefix"])
+	prefix = config["dbtableprefix"]
+	print ("Connected to", config["dbname"]+", table prefix", prefix)
 	print (config["dbtablemodifyprefix"])
 
-	sql = "DELETE FROM {0}changesets;".format(config["dbtableprefix"])
+	sql = "DELETE FROM {0}changesets;".format(prefix)
 	cur.execute(sql)
+
+	maxIds = copytodb.GetMaxIds(cur, config, prefix)
+	maxUid = maxIds["uid"]-1
+	maxChangeset = maxIds["changeset"]-1
 
 	for fi in os.listdir("changesets"):
 		print fi
@@ -70,7 +75,7 @@ if __name__=="__main__":
 				closed_at = datetime.datetime.strptime(cs.attrib["closed_at"], "%Y-%m-%dT%H:%M:%SZ")
 				closed_at2 = int(time.mktime(closed_at.timetuple()))
 
-			sql = "INSERT INTO {0}changesets(id, username, uid, tags, open_timestamp, close_timestamp, is_open".format(config["dbtableprefix"])
+			sql = "INSERT INTO {0}changesets(id, username, uid, tags, open_timestamp, close_timestamp, is_open".format(prefix)
 			if rectOk:
 				sql += ", geom"
 			sql += ") VALUES ({}, %s, {}, %s, {}, {}, %s".format(objId, uid, created_at2, closed_at2)
@@ -79,5 +84,21 @@ if __name__=="__main__":
 			sql += ");"
 			cur.execute(sql, (user, json.dumps(tags), is_open))
 
+			if uid != "NULL" and uid > maxUid:
+				maxUid = uid
+			if objId > maxChangeset:
+				maxChangeset = objId
+
+	sql = "DELETE FROM {0}nextids WHERE id = 'changeset';".format(prefix)
+	cur.execute(sql)
+	copytodb.DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('changeset', {1});".format(prefix, maxChangeset+1))
+
+	sql = "DELETE FROM {0}nextids WHERE id = 'uid';".format(prefix)
+	cur.execute(sql)
+	copytodb.DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('uid', {1});".format(prefix, maxUid+1))
+
 	conn.commit()
+
+	copytodb.ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtabletestprefix"])
+	copytodb.ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtablemodifyprefix"])
 
