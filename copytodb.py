@@ -322,6 +322,8 @@ def ResetChangesetUidCounts(conn, config, parent, pactive):
 	cur.execute(sql)
 	DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('uid', {1});".format(pactive, maxUid+1))
 
+	conn.commit()
+
 def ReadConfig(fina):
 
 	configFi = open(fina, "rt")
