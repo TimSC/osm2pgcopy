@@ -97,9 +97,6 @@ def CopyToDb(conn, config, p, filesPrefix):
 	DbExec(cur, "COPY {0}relation_mems_r FROM PROGRAM 'zcat {1}relationmems-r.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
 	conn.commit()
 
-	DbExec(cur, "COPY {0}nextids FROM PROGRAM 'zcat {1}nextids.csv.gz' WITH (FORMAT 'csv', DELIMITER ',', NULL 'NULL');".format(p, filesPrefix))
-	conn.commit()
-
 def CreateIndices(conn, config, p):
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
@@ -160,6 +157,21 @@ def CreateIndices(conn, config, p):
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_ts ON {0}liveways (timestamp);".format(p, filesPrefix))
 	conn.commit()
 	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_ts ON {0}liverelations (timestamp);".format(p, filesPrefix))
+	conn.commit()
+
+	#Object user indices
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldnodes_uid ON {0}livenodes USING BRIN(uid);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldways_uid ON {0}liveways USING BRIN(uid);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}oldrelations_uid ON {0}liverelations USING BRIN(uid);".format(p, filesPrefix))
+	conn.commit()
+
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}livenodes_uid ON {0}livenodes USING BRIN(uid);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liveways_uid ON {0}liveways USING BRIN(uid);".format(p, filesPrefix))
+	conn.commit()
+	DbExec(cur, "CREATE INDEX IF NOT EXISTS {0}liverelations_uid ON {0}liverelations USING BRIN(uid);".format(p, filesPrefix))
 	conn.commit()
 
 	#Changeset indices
@@ -272,29 +284,32 @@ def RefreshMaxIds(conn, config, p, p2, p3):
 	cur.execute(sql)
 	conn.commit()
 
-def ResetChangesetUidCounts(conn, config, prefix, pactive):
+def ResetChangesetUidCounts(conn, config, parent, pactive):
 
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, cur)
 	#Lock the tables?
 
 	#Changeset
-	maxIds = GetMaxIds(cur, config, prefix)["changeset"]
+	parentMaxId = 0
+	if parent is not None:
+		parentMaxId = GetMaxIds(cur, config, parent)["changeset"]
 	testCsMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "changeset")
 	testCsMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "changeset")
 	testCsMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "changeset")
-	maxChangeset = max(0, maxIds, testCsMaxIdNode, testCsMaxIdWay, testCsMaxIdRelation)
+	maxChangeset = max(0, parentMaxId, testCsMaxIdNode, testCsMaxIdWay, testCsMaxIdRelation)
 
 	sql = "DELETE FROM {0}nextids WHERE id = 'changeset';".format(pactive)
 	cur.execute(sql)
 	DbExec(cur, "INSERT INTO {0}nextids (id, maxid) VALUES ('changeset', {1});".format(pactive, maxChangeset+1))
 
 	#Uid
-	maxIds = GetMaxIds(cur, config, prefix)["uid"]
+	if parent is not None:
+		parentMaxId = GetMaxIds(cur, config, parent)["uid"]
 	testUidMaxIdNode = GetMaxIdForTable(cur, pactive, "nodes", "uid")
 	testUidMaxIdWay = GetMaxIdForTable(cur, pactive, "ways", "uid")
 	testUidMaxIdRelation = GetMaxIdForTable(cur, pactive, "relations", "uid")
-	maxUid = max(0, maxIds, testUidMaxIdNode, testUidMaxIdWay, testUidMaxIdRelation)
+	maxUid = max(0, parentMaxId, testUidMaxIdNode, testUidMaxIdWay, testUidMaxIdRelation)
 
 	sql = "DELETE FROM {0}nextids WHERE id = 'uid';".format(pactive)
 	cur.execute(sql)
@@ -358,6 +373,7 @@ if __name__=="__main__":
 			CreateIndices(conn, config, config["dbtabletestprefix"])
 		elif userIn == "7":
 			RefreshMaxIds(conn, config, config["dbtableprefix"], config["dbtabletestprefix"], config["dbtablemodifyprefix"])
+			ResetChangesetUidCounts(conn, config, None, config["dbtableprefix"])
 			ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtabletestprefix"])
 			ResetChangesetUidCounts(conn, config, config["dbtableprefix"], config["dbtablemodifyprefix"])
 		elif userIn == "q":

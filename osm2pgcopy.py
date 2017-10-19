@@ -42,10 +42,6 @@ class CsvStore(object):
 		self.relationMemWaysFile = gzip.GzipFile(outPrefix+"relationmems-w.csv.gz", "wb")
 		self.relationMemRelsFile = gzip.GzipFile(outPrefix+"relationmems-r.csv.gz", "wb")
 
-		self.nextIdsFile = gzip.GzipFile(outPrefix+"nextids.csv.gz", "wb")
-		self.maxUid = 0
-		self.maxChangeset = 0
-
 	def Close(self):
 		self.livenodeFile.close()
 		self.livewayFile.close()
@@ -63,13 +59,6 @@ class CsvStore(object):
 		self.relationMemNodesFile.close()
 		self.relationMemWaysFile.close()
 		self.relationMemRelsFile.close()
-
-		li = u'{0},{1}\n'.format("uid", self.maxUid+1).encode("UTF-8")
-		self.nextIdsFile.write(li)
-		li = u'{0},{1}\n'.format("changeset", self.maxChangeset+1).encode("UTF-8")
-		self.nextIdsFile.write(li)
-
-		self.nextIdsFile.close()
 
 	def FuncStoreNode(self, objectId, metaData, tags, pos):
 		version, timestamp, changeset, uid, username, visible, current = metaData
@@ -104,11 +93,6 @@ class CsvStore(object):
 			self.oldnodeFile.write(li)
 
 		self.nodeIdsFile.write("{0}\n".format(objectId))
-
-		if uid != "NULL" and uid > self.maxUid:
-			self.maxUid = uid
-		if changeset != "NULL" and changeset > self.maxChangeset:
-			self.maxChangeset = changeset
 
 	def FuncStoreWay(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible, current = metaData
@@ -146,11 +130,6 @@ class CsvStore(object):
 		self.wayIdsFile.write("{0}\n".format(objectId))
 		for i, mem in enumerate(refs):
 			self.wayMembersFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, mem))
-
-		if uid != "NULL" and uid > self.maxUid:
-			self.maxUid = uid
-		if changeset != "NULL" and changeset > self.maxChangeset:
-			self.maxChangeset = changeset
 
 	def FuncStoreRelation(self, objectId, metaData, tags, refs):
 		version, timestamp, changeset, uid, username, visible, current = metaData
@@ -196,11 +175,6 @@ class CsvStore(object):
 				self.relationMemWaysFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
 			elif memTy == "relation":
 				self.relationMemRelsFile.write("{0},{1},{2},{3}\n".format(objectId, version, i, memId))
-
-		if uid != "NULL" and uid > self.maxUid:
-			self.maxUid = uid
-		if changeset != "NULL" and changeset > self.maxChangeset:
-			self.maxChangeset = changeset
 
 if __name__=="__main__":
 
